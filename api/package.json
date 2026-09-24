@@ -11,9 +11,10 @@
     "test:ingestion": "tsx src/files/ingestion.integration-test.ts",
     "test:ingestion-rollback": "tsx src/files/file-ingestion.rollback-test.ts",
     "test:excel": "tsx src/excel/excel.integration-test.ts",
-    "test:pdf": "tsx src/pdf/pdf.integration-test.ts"
-    ,"test:matching": "tsx src/matching/matching.integration-test.ts"
-    ,"test:matching-preconditions": "tsx src/matching/matching-preconditions.integration-test.ts"
+    "test:pdf": "tsx src/pdf/pdf.integration-test.ts",
+    "test:matching": "tsx src/matching/matching.integration-test.ts",
+    "test:matching-preconditions": "tsx src/matching/matching-preconditions.integration-test.ts",
+    "test:results": "tsx src/batches/results.integration-test.ts"
   },
   "dependencies": {
     "@ecomkit/database": "*",

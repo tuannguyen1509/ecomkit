@@ -95,3 +95,5 @@ Stage 4 adds technical `.xlsx` parsing into `UploadedFile.rawData` and `Processi
 Stage 5 adds generic page-level PDF parsing with conservative platform detection. Shopee/SPX support is validated only against the approved local sample; Lazada and TikTok production layouts remain pending. See [docs/pdf-parser.md](docs/pdf-parser.md).
 
 Stage 6 matches persisted Excel/PDF candidates only by normalized platform order code and creates one Master Order per unique code. See [docs/matching-engine.md](docs/matching-engine.md).
+
+Stage 7 adds the read-only Batch Result UI at `/batches/[batchId]/results`, backed by `GET /api/batches/:batchId/results`. It shows persisted summaries, server-side pagination and matching-status filters; it does not rerun Matching, parse files, or establish field source priority. See [docs/result-ui.md](docs/result-ui.md).

@@ -9,7 +9,7 @@ body {
   color: #17202a;
 }
 
-main {
+main:not(.page) {
   max-width: 720px;
   margin: 12rem auto;
   padding: 2rem;
