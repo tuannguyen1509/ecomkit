@@ -89,3 +89,5 @@ Prisma setup, database schema, migrations, business tables, parsers, authenticat
 Stage 2 now includes the PostgreSQL core schema and Prisma 7 database package. See [docs/database.md](docs/database.md) for models, migration commands, and data rules.
 
 Stage 3 adds Batch creation and safe file ingestion. See [docs/file-ingestion.md](docs/file-ingestion.md). Stage 3 stores `.xlsx` and `.pdf` files only; it does not parse their contents.
+
+Stage 4 adds technical `.xlsx` parsing into `UploadedFile.rawData` and `ProcessingError`; it does not create Orders or perform matching. See [docs/excel-parser.md](docs/excel-parser.md) and the complete [configuration and installation guide](docs/HUONG_DAN_CAU_HINH_VA_CAI_DAT.md).

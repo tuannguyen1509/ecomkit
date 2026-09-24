@@ -57,6 +57,15 @@ export class StorageService {
     }
   }
 
+  resolveStoredFile(storagePath: string | null): string {
+    if (!storagePath) {
+      throw new Error("Uploaded file has no storage path");
+    }
+    const absolutePath = resolve(this.config.storageRoot, storagePath);
+    this.assertWithin(this.config.uploadsRoot, absolutePath);
+    return absolutePath;
+  }
+
   private batchDirectory(batchId: string): string {
     const path = resolve(this.config.uploadsRoot, batchId);
     this.assertWithin(this.config.uploadsRoot, path);

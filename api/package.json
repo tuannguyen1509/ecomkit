@@ -9,16 +9,18 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node -e \"console.log('api foundation test passed')\"",
     "test:ingestion": "tsx src/files/ingestion.integration-test.ts",
-    "test:ingestion-rollback": "tsx src/files/file-ingestion.rollback-test.ts"
+    "test:ingestion-rollback": "tsx src/files/file-ingestion.rollback-test.ts",
+    "test:excel": "tsx src/excel/excel.integration-test.ts"
   },
   "dependencies": {
     "@ecomkit/database": "*",
     "@nestjs/common": "^12.0.0",
     "@nestjs/core": "^12.0.0",
     "@nestjs/platform-express": "^12.0.0",
+    "adm-zip": "0.6.1",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
-    "adm-zip": "0.6.1",
+    "exceljs": "^4.4.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
