@@ -1,0 +1,2 @@
+export const PROJECT_NAME = "Ecomkit - Vui Khỏe" as const;
+export const TECHNICAL_SLUG = "ecomkit-vuikhoe" as const;

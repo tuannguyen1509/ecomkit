@@ -1,55 +1,87 @@
 # Ecomkit - Vui Khỏe
 
-Docker-first local foundation for ECOM-KIT. Stage 0 provides only the local PostgreSQL and Redis infrastructure required by later stages; application source is intentionally not scaffolded here.
+ECOM-KIT is a Docker-first monorepo foundation for processing and reconciling orders across platforms.
+
+## Current architecture
+
+```text
+Browser
+   ↓
+Next.js Web
+   ↓
+NestJS API
+   ↓
+PostgreSQL
+
+API / Worker
+   ↓
+Redis
+```
+
+Stage 1 provides application foundations only. It contains no business logic, Prisma schema, migrations, authentication, parsers, integrations, or business UI.
 
 ## Requirements
 
 - Docker with Docker Compose
+- Node.js 24.21.0 LTS for local commands
+- npm
 - Git
-- Node.js and npm (application scaffolding is planned for Stage 1)
+
+The repository pins the intended runtime in `.node-version` and `.nvmrc`. The Dockerfiles use `node:24.21.0-bookworm-slim`.
 
 ## Configure environment
-
-From this directory, copy `.env.example` to `.env` and adjust local-only values as needed:
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-`.env` is ignored by Git. Do not commit real passwords or tokens.
+`.env` is ignored by Git. Never commit real passwords or tokens.
 
-## Start infrastructure
+## Start
 
 ```powershell
-docker compose -p ecomkit-vuikhoe up -d
+npm install
+docker compose -p ecomkit-vuikhoe up -d --build
 ```
 
-## Stop infrastructure
+## Status
+
+```powershell
+docker compose -p ecomkit-vuikhoe ps
+```
+
+## Logs
+
+```powershell
+docker compose -p ecomkit-vuikhoe logs -f
+```
+
+## Stop
 
 ```powershell
 docker compose -p ecomkit-vuikhoe down
 ```
 
-The named volumes are preserved by `down`, so local data remains available on the next start.
+This keeps the named PostgreSQL and Redis volumes. Do not use `docker compose down -v` as a normal stop command because it is destructive and removes persistent data.
 
-## Inspect containers and logs
-
-```powershell
-docker compose -p ecomkit-vuikhoe ps
-docker compose -p ecomkit-vuikhoe logs -f postgres
-docker compose -p ecomkit-vuikhoe logs -f redis
-```
-
-## Test PostgreSQL
+## Development commands
 
 ```powershell
-docker compose -p ecomkit-vuikhoe exec -T postgres psql -U ecomkit -d ecomkit -c "SELECT 1;"
+npm run dev:web
+npm run dev:api
+npm run dev:worker
+npm run typecheck
+npm run build
+npm test
 ```
 
-## Test Redis
+## Foundation endpoints
 
-```powershell
-docker compose -p ecomkit-vuikhoe exec -T redis redis-cli PING
-```
+- Web: http://localhost:3000
+- API health: http://localhost:3001/api/health
 
-Services are connected to the private `ecomkit-network` Docker network and are not published to the host or Internet in Stage 0.
+The API health endpoint reports only API process health. It does not claim database or Redis health until those real checks are implemented in a later stage.
+
+## Stage 2 boundary
+
+Prisma setup, database schema, migrations, business tables, parsers, authentication, integrations, and production deployment are intentionally deferred to later stages.

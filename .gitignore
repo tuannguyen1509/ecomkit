@@ -29,3 +29,7 @@ Desktop.ini
 .vscode/
 *.swp
 *.swo
+
+# TypeScript and package manager caches
+*.tsbuildinfo
+.eslintcache
