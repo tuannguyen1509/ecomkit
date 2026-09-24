@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecomkit-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - ecomkit-postgres-data:/var/lib/postgresql/data
+    networks:
+      - ecomkit-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: ecomkit-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - ecomkit-redis-data:/data
+    networks:
+      - ecomkit-network
+
+volumes:
+  ecomkit-postgres-data:
+    name: ecomkit-postgres-data
+  ecomkit-redis-data:
+    name: ecomkit-redis-data
+
+networks:
+  ecomkit-network:
+    name: ecomkit-network
+    driver: bridge
