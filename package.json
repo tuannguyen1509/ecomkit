@@ -23,7 +23,13 @@
     "build:api": "npm run build --workspace api",
     "build:worker": "npm run build --workspace worker",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "db:format": "npm run db:format --workspace database",
+    "db:validate": "npm run db:validate --workspace database",
+    "db:generate": "npm run db:generate --workspace database",
+    "db:migrate": "npm run db:migrate --workspace database",
+    "db:status": "npm run db:status --workspace database",
+    "db:smoke": "npm run db:smoke --workspace database"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

@@ -8,6 +8,9 @@ node_modules/
 .next/
 dist/
 coverage/
+database/generated/
+database/prisma.config.js
+database/prisma.config.d.ts
 
 # Runtime output
 logs/

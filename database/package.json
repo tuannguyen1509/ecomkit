@@ -2,7 +2,26 @@
   "name": "@ecomkit/database",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "test": "node -e \"console.log('database foundation test passed')\""
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "db:format": "prisma format --config prisma.config.ts",
+    "db:validate": "prisma validate --config prisma.config.ts",
+    "db:generate": "prisma generate --config prisma.config.ts",
+    "db:migrate": "prisma migrate dev --config prisma.config.ts --name stage2_core",
+    "db:status": "prisma migrate status --config prisma.config.ts",
+    "db:smoke": "tsx src/smoke-test.ts",
+    "test": "npm run db:smoke"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "dotenv": "18.0.3",
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "@types/pg": "8.23.1",
+    "prisma": "7.10.0"
   }
 }

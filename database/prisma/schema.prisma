@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FileType {
+  EXCEL
+  PDF
+}
+
+enum Platform {
+  SHOPEE
+  LAZADA
+  TIKTOK
+  UNKNOWN
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum MatchingStatus {
+  MATCHED
+  PDF_NOT_FOUND
+  EXCEL_NOT_FOUND
+  DUPLICATE
+  PARSE_ERROR
+}
+
+enum Severity {
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum ProcessingLogLevel {
+  INFO
+  WARNING
+  ERROR
+}
+
+model Batch {
+  id               String           @id @default(cuid())
+  processingStatus ProcessingStatus @default(PENDING) @map("processing_status")
+  startedAt        DateTime?        @map("started_at")
+  finishedAt       DateTime?        @map("finished_at")
+  fileCount        Int              @default(0) @map("file_count")
+  excelFileCount   Int              @default(0) @map("excel_file_count")
+  pdfFileCount     Int              @default(0) @map("pdf_file_count")
+  orderCount       Int              @default(0) @map("order_count")
+  successCount     Int              @default(0) @map("success_count")
+  warningCount     Int              @default(0) @map("warning_count")
+  errorCount       Int              @default(0) @map("error_count")
+  createdByUserId  String?          @map("created_by_user_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  uploadedFiles    UploadedFile[]
+  orders           Order[]
+  processingLogs   ProcessingLog[]
+  processingErrors ProcessingError[]
+
+  @@index([createdAt])
+  @@index([processingStatus])
+  @@map("batches")
+}
+
+model UploadedFile {
+  id                String           @id @default(cuid())
+  batchId           String           @map("batch_id")
+  originalFilename  String           @map("original_filename")
+  sanitizedFilename String           @map("sanitized_filename")
+  fileType          FileType         @map("file_type")
+  platform          Platform         @default(UNKNOWN)
+  mimeType          String?          @map("mime_type")
+  sizeBytes         BigInt?          @map("size_bytes")
+  storagePath       String?          @map("storage_path")
+  processingStatus  ProcessingStatus @default(PENDING) @map("processing_status")
+  rawText           String?          @map("raw_text") @db.Text
+  rawStructure      Json?            @map("raw_structure")
+  rawData           Json?            @map("raw_data")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+
+  batch            Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  processingLogs   ProcessingLog[]
+  processingErrors ProcessingError[]
+
+  @@index([batchId])
+  @@index([platform])
+  @@index([processingStatus])
+  @@index([createdAt])
+  @@map("uploaded_files")
+}
+
+model Order {
+  id                     String         @id @default(cuid())
+  batchId                String         @map("batch_id")
+  rawOrderCode           String?        @map("raw_order_code")
+  normalizedOrderCode    String?        @map("normalized_order_code")
+  platform               Platform       @default(UNKNOWN)
+  matchingStatus         MatchingStatus @default(PARSE_ERROR) @map("matching_status")
+  orderDate              DateTime?      @map("order_date")
+  eshopOrderCode         String?        @map("eshop_order_code")
+  salesChannel           String?        @map("sales_channel")
+  orderStatus            String?        @map("order_status")
+  customerName           String?        @map("customer_name")
+  phone                  String?
+  address                String?        @db.Text
+  provinceCity           String?        @map("province_city")
+  vatIssuedDate          DateTime?      @map("vat_issued_date")
+  note                   String?        @db.Text
+  amountCollected        Decimal?       @map("amount_collected") @db.Decimal(20, 4)
+  receivableStatus       String?        @map("receivable_status")
+  differenceAmount       Decimal?       @map("difference_amount") @db.Decimal(20, 4)
+  productPriceVat8       Decimal?       @map("product_price_vat_8") @db.Decimal(20, 4)
+  totalCostPercent       Decimal?       @map("total_cost_percent") @db.Decimal(9, 4)
+  totalAmountToCollect   Decimal?       @map("total_amount_to_collect") @db.Decimal(20, 4)
+  affiliateFeeVuikhoe    Decimal?       @map("affiliate_fee_vuikhoe") @db.Decimal(20, 4)
+  discountVuikhoe        Decimal?       @map("discount_vuikhoe") @db.Decimal(20, 4)
+  discountPercentVuikhoe Decimal?       @map("discount_percent_vuikhoe") @db.Decimal(9, 4)
+  fixedPlatformFee       Decimal?       @map("fixed_platform_fee") @db.Decimal(20, 4)
+  servicePlatformFee     Decimal?       @map("service_platform_fee") @db.Decimal(20, 4)
+  transactionPlatformFee Decimal?       @map("transaction_platform_fee") @db.Decimal(20, 4)
+  platformCostPercent    Decimal?       @map("platform_cost_percent") @db.Decimal(9, 4)
+  createdAt              DateTime       @default(now()) @map("created_at")
+  updatedAt              DateTime       @updatedAt @map("updated_at")
+
+  batch            Batch             @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  items            OrderItem[]
+  processingLogs   ProcessingLog[]
+  processingErrors ProcessingError[]
+
+  @@index([batchId])
+  @@index([normalizedOrderCode])
+  @@index([matchingStatus])
+  @@index([platform])
+  @@index([createdAt])
+  @@index([batchId, normalizedOrderCode])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String   @map("order_id")
+  productName    String?  @map("product_name")
+  sku            String?
+  quantity       Int?
+  price          Decimal? @db.Decimal(20, 4)
+  variant        String?
+  weight         Decimal? @db.Decimal(20, 4)
+  rawProductText String?  @map("raw_product_text") @db.Text
+  sourcePlatform Platform @default(UNKNOWN) @map("source_platform")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model ProcessingError {
+  id              String   @id @default(cuid())
+  batchId         String   @map("batch_id")
+  uploadedFileId  String?  @map("uploaded_file_id")
+  orderId         String?  @map("order_id")
+  errorCode       String   @map("error_code")
+  message         String   @db.Text
+  sheetName       String?  @map("sheet_name")
+  pageNumber      Int?     @map("page_number")
+  rowNumber       Int?     @map("row_number")
+  columnName      String?  @map("column_name")
+  fieldName       String?  @map("field_name")
+  rawValue        String?  @map("raw_value") @db.Text
+  severity        Severity
+  cause           String?  @db.Text
+  impact          String?  @db.Text
+  suggestedAction String?  @map("suggested_action") @db.Text
+  rawContext      Json?    @map("raw_context")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  batch        Batch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  uploadedFile UploadedFile? @relation(fields: [uploadedFileId], references: [id], onDelete: SetNull)
+  order        Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([batchId])
+  @@index([uploadedFileId])
+  @@index([orderId])
+  @@index([errorCode])
+  @@index([severity])
+  @@index([createdAt])
+  @@map("processing_errors")
+}
+
+model ProcessingLog {
+  id             String             @id @default(cuid())
+  batchId        String             @map("batch_id")
+  uploadedFileId String?            @map("uploaded_file_id")
+  orderId        String?            @map("order_id")
+  level          ProcessingLogLevel
+  message        String             @db.Text
+  context        Json?
+  createdAt      DateTime           @default(now()) @map("created_at")
+
+  batch        Batch         @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  uploadedFile UploadedFile? @relation(fields: [uploadedFileId], references: [id], onDelete: SetNull)
+  order        Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([batchId])
+  @@index([createdAt])
+  @@map("processing_logs")
+}
