@@ -35,8 +35,13 @@ services:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_URL: ${REDIS_URL}
+      UPLOAD_STORAGE_ROOT: ${UPLOAD_STORAGE_ROOT}
+      UPLOAD_MAX_FILE_SIZE_MB: ${UPLOAD_MAX_FILE_SIZE_MB}
+      UPLOAD_MAX_FILES_PER_BATCH: ${UPLOAD_MAX_FILES_PER_BATCH}
     ports:
       - "${API_PORT}:3001"
+    volumes:
+      - ./storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -62,6 +67,9 @@ services:
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
       REDIS_URL: ${REDIS_URL}
+      UPLOAD_STORAGE_ROOT: ${UPLOAD_STORAGE_ROOT}
+    volumes:
+      - ./storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy

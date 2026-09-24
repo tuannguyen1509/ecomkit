@@ -4,11 +4,11 @@
   "version": "0.1.0",
   "description": "Ecomkit - Vui Khỏe monorepo foundation",
   "workspaces": [
-    "web",
+    "database",
+    "shared",
     "api",
     "worker",
-    "shared",
-    "database"
+    "web"
   ],
   "engines": {
     "node": ">=24.21.0 <25"

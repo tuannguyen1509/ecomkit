@@ -87,3 +87,5 @@ The API health endpoint reports only API process health. It does not claim datab
 Prisma setup, database schema, migrations, business tables, parsers, authentication, integrations, and production deployment are intentionally deferred to later stages.
 
 Stage 2 now includes the PostgreSQL core schema and Prisma 7 database package. See [docs/database.md](docs/database.md) for models, migration commands, and data rules.
+
+Stage 3 adds Batch creation and safe file ingestion. See [docs/file-ingestion.md](docs/file-ingestion.md). Stage 3 stores `.xlsx` and `.pdf` files only; it does not parse their contents.

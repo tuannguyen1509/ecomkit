@@ -15,7 +15,10 @@ database/prisma.config.d.ts
 # Runtime output
 logs/
 *.log
-storage/uploads/
+storage/uploads/*
+!storage/uploads/.gitkeep
+storage/tmp/*
+!storage/tmp/.gitkeep
 tmp/
 temp/
 temporary/

@@ -1,4 +1,6 @@
 import { Controller, Get, Module } from "@nestjs/common";
+import { BatchesModule } from "./batches/batches.module.js";
+import { FilesModule } from "./files/files.module.js";
 
 @Controller("health")
 class HealthController {
@@ -12,5 +14,8 @@ class HealthController {
   }
 }
 
-@Module({ controllers: [HealthController] })
+@Module({
+  imports: [BatchesModule, FilesModule],
+  controllers: [HealthController]
+})
 export class AppModule {}
