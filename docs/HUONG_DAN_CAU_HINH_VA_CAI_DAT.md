@@ -96,6 +96,8 @@ Containers phải Running/Healthy theo `docker compose -p ecomkit-vuikhoe ps`.
 
 Stage 4 dùng `exceljs` **4.4.0** trong API để đọc workbook `.xlsx`, worksheet, cell display text, row number và header. Máy mới không cài riêng dependency này: `npm.cmd install` cài theo lockfile. Parser endpoint là `POST /api/batches/:batchId/excel/parse`; test là `docker compose -p ecomkit-vuikhoe exec api npm run test:excel --workspace api`.
 
+Stage 5 dùng `pdfjs-dist` **6.3.289** để đọc PDF theo trang/text items. Package hỗ trợ Node 24, được cài bằng `npm.cmd install`, không cần native executable, system package hay thay đổi Docker image. Endpoint là `POST /api/batches/:batchId/pdfs/parse`; test là `docker compose -p ecomkit-vuikhoe exec api npm run test:pdf --workspace api`.
+
 ## 8. Known issues
 
 - Node host 25 không phải runtime chuẩn; project pin Node 24.21.0 và Docker image `node:24.21.0-bookworm-slim`.
@@ -120,3 +122,4 @@ Stage 4 dùng `exceljs` **4.4.0** trong API để đọc workbook `.xlsx`, works
 | 2 | Prisma ORM | 7.10.0 | PostgreSQL ORM/migration | Không, `npm install` |
 | 3 | Multer / adm-zip | 2.x / 0.6.1 | Safe upload and XLSX container validation | Không, `npm install` |
 | 4 | exceljs | 4.4.0 | Read `.xlsx` workbook, worksheet, cells and displayed text | Không, `npm install` |
+| 5 | pdfjs-dist | 6.3.289 | Read PDF pages, text and text-item coordinates | Không, `npm install`; no OS dependency |

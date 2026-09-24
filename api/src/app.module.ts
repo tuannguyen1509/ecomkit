@@ -2,6 +2,7 @@ import { Controller, Get, Module } from "@nestjs/common";
 import { BatchesModule } from "./batches/batches.module.js";
 import { FilesModule } from "./files/files.module.js";
 import { ExcelModule } from "./excel/excel.module.js";
+import { PdfModule } from "./pdf/pdf.module.js";
 
 @Controller("health")
 class HealthController {
@@ -16,7 +17,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [BatchesModule, FilesModule, ExcelModule],
+  imports: [BatchesModule, FilesModule, ExcelModule, PdfModule],
   controllers: [HealthController]
 })
 export class AppModule {}
