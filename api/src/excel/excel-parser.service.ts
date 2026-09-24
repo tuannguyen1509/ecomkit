@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import ExcelJS, { type Cell, type Worksheet } from "exceljs";
 import type { ExcelJsonValue, ExcelParseError, ExcelParseResult } from "./excel-parser.types.js";
+import { normalizeOrderCode } from "@ecomkit/shared";
 
 const REQUIRED_HEADER = "Mã đơn sàn";
 const HEADER_ROW = 1;
@@ -69,7 +70,7 @@ export class ExcelParserService {
       totalRows += 1;
       const orderCodeCell = row.getCell(requiredColumnIndex);
       const rawOrderCode = this.displayValue(orderCodeCell);
-      const normalizedOrderCode = rawOrderCode.trim();
+      const normalizedOrderCode = normalizeOrderCode(rawOrderCode);
       rawRows.push({
         rowNumber,
         rawCells,

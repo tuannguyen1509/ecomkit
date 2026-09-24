@@ -93,3 +93,5 @@ Stage 3 adds Batch creation and safe file ingestion. See [docs/file-ingestion.md
 Stage 4 adds technical `.xlsx` parsing into `UploadedFile.rawData` and `ProcessingError`; it does not create Orders or perform matching. See [docs/excel-parser.md](docs/excel-parser.md) and the complete [configuration and installation guide](docs/HUONG_DAN_CAU_HINH_VA_CAI_DAT.md).
 
 Stage 5 adds generic page-level PDF parsing with conservative platform detection. Shopee/SPX support is validated only against the approved local sample; Lazada and TikTok production layouts remain pending. See [docs/pdf-parser.md](docs/pdf-parser.md).
+
+Stage 6 matches persisted Excel/PDF candidates only by normalized platform order code and creates one Master Order per unique code. See [docs/matching-engine.md](docs/matching-engine.md).

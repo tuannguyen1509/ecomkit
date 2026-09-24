@@ -108,6 +108,7 @@ model Order {
   normalizedOrderCode    String?        @map("normalized_order_code")
   platform               Platform       @default(UNKNOWN)
   matchingStatus         MatchingStatus @default(PARSE_ERROR) @map("matching_status")
+  sourceRefs             Json?          @map("source_refs")
   orderDate              DateTime?      @map("order_date")
   eshopOrderCode         String?        @map("eshop_order_code")
   salesChannel           String?        @map("sales_channel")

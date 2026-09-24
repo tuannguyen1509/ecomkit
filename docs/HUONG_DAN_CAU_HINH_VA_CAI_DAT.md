@@ -123,3 +123,4 @@ Stage 5 dùng `pdfjs-dist` **6.3.289** để đọc PDF theo trang/text items. P
 | 3 | Multer / adm-zip | 2.x / 0.6.1 | Safe upload and XLSX container validation | Không, `npm install` |
 | 4 | exceljs | 4.4.0 | Read `.xlsx` workbook, worksheet, cells and displayed text | Không, `npm install` |
 | 5 | pdfjs-dist | 6.3.289 | Read PDF pages, text and text-item coordinates | Không, `npm install`; no OS dependency |
+| 6 | Matching Engine | No new runtime/system dependency | Normalize and match persisted parsed candidates | Không |

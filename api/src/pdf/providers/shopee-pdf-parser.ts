@@ -1,4 +1,5 @@
 import type { PlatformPdfParser } from "./platform-pdf-parser.interface.js";
+import { normalizeOrderCode } from "@ecomkit/shared";
 
 export class ShopeePdfParser implements PlatformPdfParser {
   readonly platform = "SHOPEE" as const;
@@ -6,7 +7,7 @@ export class ShopeePdfParser implements PlatformPdfParser {
   parse(document: Parameters<PlatformPdfParser["parse"]>[0]) {
     const orders = document.pages.flatMap((page) => [...page.text.matchAll(/\d{7}[A-Z0-9]{7}/g)].map((match) => ({
       rawOrderCode: match[0],
-      normalizedOrderCode: match[0].trim(),
+      normalizedOrderCode: normalizeOrderCode(match[0]),
       sourcePage: page.pageNumber,
       rawContext: "SPX text-layer candidate"
     })));

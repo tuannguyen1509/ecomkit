@@ -12,9 +12,12 @@
     "test:ingestion-rollback": "tsx src/files/file-ingestion.rollback-test.ts",
     "test:excel": "tsx src/excel/excel.integration-test.ts",
     "test:pdf": "tsx src/pdf/pdf.integration-test.ts"
+    ,"test:matching": "tsx src/matching/matching.integration-test.ts"
+    ,"test:matching-preconditions": "tsx src/matching/matching-preconditions.integration-test.ts"
   },
   "dependencies": {
     "@ecomkit/database": "*",
+    "@ecomkit/shared": "*",
     "@nestjs/common": "^12.0.0",
     "@nestjs/core": "^12.0.0",
     "@nestjs/platform-express": "^12.0.0",
