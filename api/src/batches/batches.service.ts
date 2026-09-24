@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { prisma } from "@ecomkit/database";
 import type { MatchingStatus, Prisma } from "@ecomkit/database";
 import type { ResultQueryDto } from "./dto/result-query.dto.js";
+import type { ErrorQueryDto } from "./dto/error-query.dto.js";
 
 @Injectable()
 export class BatchesService {
@@ -163,5 +164,30 @@ export class BatchesService {
       },
       orders
     };
+  }
+
+  async findErrors(batchId: string, query: ErrorQueryDto) {
+    const page = Number(query.page ?? 1), pageSize = Number(query.pageSize ?? 20);
+    if (!Number.isInteger(page) || page < 1 || ![20, 50, 100].includes(pageSize)) throw new BadRequestException({ errorCode: "ERROR_QUERY_INVALID", message: "page must be positive and pageSize must be 20, 50, or 100." });
+    if (query.severity && !["SUCCESS", "WARNING", "ERROR"].includes(query.severity)) throw new BadRequestException({ errorCode: "ERROR_QUERY_INVALID", message: "severity is not supported." });
+    if (query.errorCode && (query.errorCode.length > 100 || !/^[A-Z0-9_]+$/.test(query.errorCode))) throw new BadRequestException({ errorCode: "ERROR_QUERY_INVALID", message: "errorCode is invalid." });
+    const batch = await prisma.batch.findUnique({ where: { id: batchId }, select: { id:true, processingStatus:true, createdAt:true } });
+    if (!batch) throw new NotFoundException({ errorCode:"BATCH_NOT_FOUND", message:"Batch was not found." });
+    const where: Prisma.ProcessingErrorWhereInput = { batchId, ...(query.severity ? { severity: query.severity as any } : {}), ...(query.errorCode ? { errorCode: query.errorCode } : {}), ...(query.uploadedFileId ? { uploadedFileId: query.uploadedFileId } : {}) };
+    const [total, groups, items, files] = await Promise.all([
+      prisma.processingError.count({ where }), prisma.processingError.groupBy({ where:{batchId}, by:["severity"], _count:{_all:true}, orderBy:{severity:"asc"} }),
+      prisma.processingError.findMany({ where, orderBy:{createdAt:"desc"}, skip:(page-1)*pageSize, take:pageSize, select:{id:true,severity:true,errorCode:true,message:true,sheetName:true,pageNumber:true,rowNumber:true,columnName:true,fieldName:true,createdAt:true,uploadedFile:{select:{id:true,originalFilename:true,fileType:true,platform:true}}} }),
+      prisma.uploadedFile.findMany({where:{batchId},select:{id:true,originalFilename:true,fileType:true}})
+    ]);
+    const counts=new Map(groups.map(g=>[g.severity,g._count._all]));
+    return { batch, summary:{totalErrors:groups.reduce((n,g)=>n+g._count._all,0),warningCount:counts.get("WARNING")??0,errorCount:counts.get("ERROR")??0}, pagination:{page,pageSize,total,totalPages:Math.ceil(total/pageSize)}, files, items };
+  }
+
+  async findError(batchId:string,errorId:string) {
+    const exists=await prisma.batch.findUnique({where:{id:batchId},select:{id:true}}); if(!exists) throw new NotFoundException({errorCode:"BATCH_NOT_FOUND",message:"Batch was not found."});
+    const error=await prisma.processingError.findFirst({where:{id:errorId,batchId},include:{uploadedFile:{select:{id:true,originalFilename:true,fileType:true,platform:true}}}});
+    if(!error) throw new NotFoundException({errorCode:"PROCESSING_ERROR_NOT_FOUND",message:"Processing error was not found in this Batch."});
+    const context=error.rawContext && typeof error.rawContext==="object" ? JSON.parse(JSON.stringify(error.rawContext),(_k,v)=>typeof v==="string"&&(/(?:[A-Z]:\\|\/app\/storage|postgresql:\/\/|password|token)/i.test(v))?"[redacted]":v) : error.rawContext;
+    return {...error,rawContext:context};
   }
 }

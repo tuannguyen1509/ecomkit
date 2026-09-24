@@ -102,6 +102,7 @@ export default function BatchResultsPage() {
         <p className={styles.brand}>Ecomkit - Vui Khỏe</p>
         <h1>Kết quả xử lý</h1>
         <p>Batch <code>{batchId}</code></p>
+        <p><a href={`/batches/${batchId}/errors`}>Xem lỗi & cảnh báo</a></p>
       </header>
 
       {loading && <section className={styles.state} aria-live="polite">Đang tải kết quả...</section>}

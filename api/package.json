@@ -14,7 +14,8 @@
     "test:pdf": "tsx src/pdf/pdf.integration-test.ts",
     "test:matching": "tsx src/matching/matching.integration-test.ts",
     "test:matching-preconditions": "tsx src/matching/matching-preconditions.integration-test.ts",
-    "test:results": "tsx src/batches/results.integration-test.ts"
+    "test:results": "tsx src/batches/results.integration-test.ts",
+    "test:errors": "tsx src/batches/errors.integration-test.ts"
   },
   "dependencies": {
     "@ecomkit/database": "*",
