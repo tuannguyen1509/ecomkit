@@ -16,3 +16,7 @@ The Error page is `/batches/[batchId]/errors`. Its filters and pagination use UR
 Raw values and raw JSON context are rendered as escaped text. The API does not expose uploaded-file storage paths and redacts path- or secret-like strings in returned raw context. No source-derived content is rendered as HTML.
 
 Error resolution workflow, History, Export, and Authentication remain outside Stage 8.
+
+## Error actionability
+
+The list shows a deterministic source label (`EXCEL_*`/Excel file, `PDF_*`/PDF file, matching errors, API-prefixed errors, or Other), marketplace only from persisted validated file platform, filename, location, technical code and stored message. Detail groups source, location, raw value and a stored suggested action; when no action exists it safely asks the user to check the indicated source location. API-specific UI is future-ready only and never fabricates marketplace calls, HTTP statuses or external codes. Secret-like raw context values and storage paths remain redacted.
