@@ -17,7 +17,10 @@
     "test:results": "tsx src/batches/results.integration-test.ts",
     "test:errors": "tsx src/batches/errors.integration-test.ts",
     "test:history": "tsx src/batches/history.integration-test.ts",
-    "test:export": "tsx src/batches/export.integration-test.ts"
+    "test:export": "tsx src/batches/export.integration-test.ts",
+    "test:auth": "tsx src/auth/auth.integration-test.ts",
+    "test:auth-guards": "tsx src/auth/auth-guards.integration-test.ts",
+    "auth:bootstrap-admin": "tsx src/auth/bootstrap-admin.ts"
   },
   "dependencies": {
     "@ecomkit/database": "*",

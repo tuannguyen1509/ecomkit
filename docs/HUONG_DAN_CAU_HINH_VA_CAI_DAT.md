@@ -129,3 +129,34 @@ Stage 5 dùng `pdfjs-dist` **6.3.289** để đọc PDF theo trang/text items. P
 | 9 | Processing History | No new runtime/system dependency | Read-only Batch history API and UI | Không |
 | 10 | Result Export | No new runtime/system dependency | XLSX/CSV export via existing ExcelJS | Không |
 | 11 | Queue / Worker | BullMQ 5.70.0; existing Redis service | `DATABASE_URL`, `API_INTERNAL_URL`, `QUEUE_BATCH_PROCESSING_NAME`, `INTERNAL_API_TIMEOUT_MS` | Không |
+| 12A.1 | Authentication foundation | Node.js `crypto.scrypt`; PostgreSQL sessions | `AUTH_SESSION_TTL_HOURS`, bootstrap ADMIN variables | Không |
+
+## Stage 12A.1 -- Authentication foundation
+
+Apply the `stage12_authentication` migration from the API container, then create the first technical ADMIN using environment variables rather than a public registration endpoint:
+
+```powershell
+docker compose -p ecomkit-vuikhoe exec api sh -lc 'cd /app/database && npx prisma migrate deploy --config prisma.config.ts'
+docker compose -p ecomkit-vuikhoe exec api npm run auth:bootstrap-admin --workspace api
+```
+
+Required non-secret configuration is documented in `.env.example`:
+
+```text
+AUTH_SESSION_TTL_HOURS=12
+BOOTSTRAP_ADMIN_USERNAME=
+BOOTSTRAP_ADMIN_PASSWORD=
+BOOTSTRAP_ADMIN_DISPLAY_NAME=
+WORKER_INTERNAL_API_KEY=
+```
+
+Set real bootstrap credentials and the Worker key only in the deployment environment; never commit them. API and Worker must receive the same `WORKER_INTERNAL_API_KEY`, then be recreated after an environment change:
+
+```powershell
+docker compose -p ecomkit-vuikhoe up -d --force-recreate api worker
+docker compose -p ecomkit-vuikhoe logs --tail=100 worker
+```
+
+Login uses an opaque HttpOnly session cookie backed by the `sessions` table. The Worker key is restricted to internal Excel/PDF/matching calls and is not a user or ADMIN credential.
+
+For a Docker smoke test, bootstrap a technical ADMIN, sign in, create/upload a synthetic batch, and call `POST /api/batches/:batchId/process` with the session cookie. The Worker then authenticates its Excel/PDF/matching calls using the internal header. Do not send the Worker key from a browser or include it in a queue job.

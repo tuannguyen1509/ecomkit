@@ -5,8 +5,11 @@ import { ExcelModule } from "./excel/excel.module.js";
 import { PdfModule } from "./pdf/pdf.module.js";
 import { MatchingModule } from "./matching/matching.module.js";
 import { QueueModule } from "./queue/queue.module.js";
+import { AuthModule } from "./auth/auth.module.js";
+import { Public } from "./auth/auth.decorators.js";
 
 @Controller("health")
+@Public()
 class HealthController {
   @Get()
   health(): { status: "ok"; service: "ecomkit-api"; timestamp: string } {
@@ -19,7 +22,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [BatchesModule, FilesModule, ExcelModule, PdfModule, MatchingModule, QueueModule],
+  imports: [AuthModule, BatchesModule, FilesModule, ExcelModule, PdfModule, MatchingModule, QueueModule],
   controllers: [HealthController]
 })
 export class AppModule {}

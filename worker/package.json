@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:internal-auth": "tsx --tsconfig tsconfig.json src/worker-config.test.ts",
     "test": "node -e \"console.log('worker foundation test passed')\""
   },
   "dependencies": {

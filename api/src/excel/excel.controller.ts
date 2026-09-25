@@ -1,6 +1,7 @@
 import { Controller, HttpCode, Inject, Param, Post } from "@nestjs/common";
 import { BatchIdParamDto } from "../batches/dto/batch-id-param.dto.js";
 import { ExcelProcessingService } from "./excel-processing.service.js";
+import { AllowInternalWorker } from "../auth/auth.decorators.js";
 
 @Controller("batches")
 export class ExcelController {
@@ -8,6 +9,7 @@ export class ExcelController {
 
   @Post(":batchId/excel/parse")
   @HttpCode(200)
+  @AllowInternalWorker()
   parse(@Param() params: BatchIdParamDto) {
     return this.processing.parseBatchExcel(params.batchId);
   }
