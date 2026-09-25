@@ -2,6 +2,7 @@ import { Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
 import { BatchIdParamDto } from "./dto/batch-id-param.dto.js";
 import { ResultQueryDto } from "./dto/result-query.dto.js";
 import { ErrorQueryDto } from "./dto/error-query.dto.js";
+import { HistoryQueryDto } from "./dto/history-query.dto.js";
 import { BatchesService } from "./batches.service.js";
 
 @Controller("batches")
@@ -11,6 +12,11 @@ export class BatchesController {
   @Post()
   createBatch(): Promise<{ id: string; processingStatus: string; createdAt: Date }> {
     return this.batches.create();
+  }
+
+  @Get("history")
+  getHistory(@Query() query: HistoryQueryDto) {
+    return this.batches.findHistory(query);
   }
 
   @Get(":batchId/results")

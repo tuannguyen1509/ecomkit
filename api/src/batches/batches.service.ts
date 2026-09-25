@@ -1,8 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { prisma } from "@ecomkit/database";
-import type { MatchingStatus, Prisma } from "@ecomkit/database";
+import type { MatchingStatus, Prisma, ProcessingStatus } from "@ecomkit/database";
 import type { ResultQueryDto } from "./dto/result-query.dto.js";
 import type { ErrorQueryDto } from "./dto/error-query.dto.js";
+import type { HistoryQueryDto } from "./dto/history-query.dto.js";
 
 @Injectable()
 export class BatchesService {
@@ -163,6 +164,36 @@ export class BatchesService {
         totalPages: Math.ceil(filteredTotal / pageSize)
       },
       orders
+    };
+  }
+
+  async findHistory(query: HistoryQueryDto) {
+    const page = Number(query.page ?? 1);
+    const pageSize = Number(query.pageSize ?? 20);
+    const statuses: ProcessingStatus[] = ["PENDING", "PROCESSING", "SUCCESS", "WARNING", "ERROR"];
+    if (!Number.isInteger(page) || page < 1 || ![20, 50, 100].includes(pageSize) || (query.status && !statuses.includes(query.status as ProcessingStatus))) {
+      throw new BadRequestException({ errorCode: "HISTORY_QUERY_INVALID", message: "page must be positive, pageSize must be 20, 50, or 100, and status must be supported." });
+    }
+    const where: Prisma.BatchWhereInput = query.status ? { processingStatus: query.status as ProcessingStatus } : {};
+    const [total, batches] = await Promise.all([
+      prisma.batch.count({ where }),
+      prisma.batch.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], skip: (page - 1) * pageSize, take: pageSize, select: { id: true, createdAt: true, updatedAt: true, processingStatus: true, fileCount: true, excelFileCount: true, pdfFileCount: true, orderCount: true } })
+    ]);
+    const ids = batches.map((batch) => batch.id);
+    const [matchGroups, errorGroups] = ids.length ? await Promise.all([
+      prisma.order.groupBy({ where: { batchId: { in: ids } }, by: ["batchId", "matchingStatus"], _count: { _all: true } }),
+      prisma.processingError.groupBy({ where: { batchId: { in: ids } }, by: ["batchId", "severity"], _count: { _all: true } })
+    ]) : [[], []] as const;
+    const matched = new Map<string, number>();
+    for (const group of matchGroups) if (group.matchingStatus === "MATCHED") matched.set(group.batchId, group._count._all);
+    const warnings = new Map<string, number>(), errors = new Map<string, number>();
+    for (const group of errorGroups) {
+      if (group.severity === "WARNING") warnings.set(group.batchId, group._count._all);
+      if (group.severity === "ERROR") errors.set(group.batchId, group._count._all);
+    }
+    return {
+      pagination: { page, pageSize, total, totalPages: Math.ceil(total / pageSize) },
+      items: batches.map((batch) => ({ ...batch, matchedCount: matched.get(batch.id) ?? 0, warningCount: warnings.get(batch.id) ?? 0, errorCount: errors.get(batch.id) ?? 0 }))
     };
   }
 

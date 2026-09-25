@@ -99,3 +99,5 @@ Stage 6 matches persisted Excel/PDF candidates only by normalized platform order
 Stage 7 adds the read-only Batch Result UI at `/batches/[batchId]/results`, backed by `GET /api/batches/:batchId/results`. It shows persisted summaries, server-side pagination and matching-status filters; it does not rerun Matching, parse files, or establish field source priority. See [docs/result-ui.md](docs/result-ui.md).
 
 Stage 8 adds read-only ProcessingError list/detail views at `/batches/[batchId]/errors`.
+
+Stage 9 adds the read-only processing history at `/history`.

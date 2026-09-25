@@ -16,6 +16,7 @@
     "test:matching-preconditions": "tsx src/matching/matching-preconditions.integration-test.ts",
     "test:results": "tsx src/batches/results.integration-test.ts",
     "test:errors": "tsx src/batches/errors.integration-test.ts"
+    ,"test:history": "tsx src/batches/history.integration-test.ts"
   },
   "dependencies": {
     "@ecomkit/database": "*",
