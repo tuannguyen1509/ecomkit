@@ -131,6 +131,12 @@ function Results({ data, currentStatus, group, onSetQuery, onSetGroup }: {
   const canGoNext = data.pagination.page < data.pagination.totalPages;
 
   return <>
+    <section className={styles.filters} aria-label="Xuất kết quả">
+      <strong>Xuất kết quả</strong>
+      <a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=xlsx&status=ALL`}>Xuất Excel — tất cả</a>
+      <a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=csv&status=ALL`}>Xuất CSV — tất cả</a>
+      {currentStatus && <><a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=xlsx&status=${currentStatus}`}>Xuất Excel — đang lọc</a><a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=csv&status=${currentStatus}`}>Xuất CSV — đang lọc</a></>}
+    </section>
     <section className={styles.cards} aria-label="Tóm tắt Batch">
       <Stat label="Tổng file" value={data.summary.totalFiles} />
       <Stat label="Tổng đơn" value={data.summary.totalOrders} />

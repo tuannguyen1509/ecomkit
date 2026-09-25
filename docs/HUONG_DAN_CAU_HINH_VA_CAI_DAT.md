@@ -127,3 +127,4 @@ Stage 5 dùng `pdfjs-dist` **6.3.289** để đọc PDF theo trang/text items. P
 | 7 | Result UI | No new runtime/system dependency | Read-only Batch result API and Next.js result screen | Không |
 | 8 | Error Management UI | No new runtime/system dependency | Read-only ProcessingError API and UI | Không |
 | 9 | Processing History | No new runtime/system dependency | Read-only Batch history API and UI | Không |
+| 10 | Result Export | No new runtime/system dependency | XLSX/CSV export via existing ExcelJS | Không |

@@ -1,8 +1,10 @@
-import { Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Post, Query, Res, StreamableFile } from "@nestjs/common";
+import type { Response } from "express";
 import { BatchIdParamDto } from "./dto/batch-id-param.dto.js";
 import { ResultQueryDto } from "./dto/result-query.dto.js";
 import { ErrorQueryDto } from "./dto/error-query.dto.js";
 import { HistoryQueryDto } from "./dto/history-query.dto.js";
+import { ExportQueryDto } from "./dto/export-query.dto.js";
 import { BatchesService } from "./batches.service.js";
 
 @Controller("batches")
@@ -17,6 +19,14 @@ export class BatchesController {
   @Get("history")
   getHistory(@Query() query: HistoryQueryDto) {
     return this.batches.findHistory(query);
+  }
+
+  @Get(":batchId/export")
+  async export(@Param() params: BatchIdParamDto, @Query() query: ExportQueryDto, @Res({ passthrough: true }) response: Response) {
+    const file = await this.batches.exportOrders(params.batchId, query);
+    response.setHeader("Content-Type", file.contentType);
+    response.setHeader("Content-Disposition", `attachment; filename=\"${file.filename}\"`);
+    return new StreamableFile(file.content);
   }
 
   @Get(":batchId/results")

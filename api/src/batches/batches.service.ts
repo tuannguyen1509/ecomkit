@@ -1,12 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { prisma } from "@ecomkit/database";
 import type { MatchingStatus, Prisma, ProcessingStatus } from "@ecomkit/database";
 import type { ResultQueryDto } from "./dto/result-query.dto.js";
 import type { ErrorQueryDto } from "./dto/error-query.dto.js";
 import type { HistoryQueryDto } from "./dto/history-query.dto.js";
+import type { ExportQueryDto } from "./dto/export-query.dto.js";
+import ExcelJS from "exceljs";
 
 @Injectable()
 export class BatchesService {
+  private readonly exportColumns = [
+    ["Ngày Lên Đơn", "orderDate"], ["Mã đơn ESHOP", "eshopOrderCode"], ["Mã đơn sàn", "rawOrderCode"], ["Kênh Bán Hàng", "salesChannel"], ["Trạng Thái Đơn Hàng", "orderStatus"], ["Tên Khách Hàng", "customerName"], ["SĐT", "phone"], ["Địa Chỉ", "address"], ["Tỉnh/TP", "provinceCity"], ["Ngày Xuất VAT", "vatIssuedDate"], ["Ghi Chú", "note"], ["Đã Thu Tiền", "amountCollected"], ["Trạng Thái Công Nợ", "receivableStatus"], ["Chênh lệch", "differenceAmount"], ["Giá SP (VAT 8%)", "productPriceVat8"], ["% Tổng Chi Phí", "totalCostPercent"], ["Tổng Tiền Sẽ Thu", "totalAmountToCollect"], ["Phí Affiliate (Vui Khỏe)", "affiliateFeeVuikhoe"], ["Chiết Khấu (Vui Khỏe)", "discountVuikhoe"], ["% Chiết Khấu Vui Khỏe", "discountPercentVuikhoe"], ["Phí Cố Định (TMĐT)", "fixedPlatformFee"], ["Phí dịch vụ (TMĐT)", "servicePlatformFee"], ["Phí Giao Dịch (TMĐT)", "transactionPlatformFee"], ["% Chi Phí Sàn TMĐT", "platformCostPercent"]
+  ] as const;
   async create(): Promise<{ id: string; processingStatus: string; createdAt: Date }> {
     return prisma.batch.create({
       data: { processingStatus: "PENDING" },
@@ -196,6 +201,31 @@ export class BatchesService {
       items: batches.map((batch) => ({ ...batch, matchedCount: matched.get(batch.id) ?? 0, warningCount: warnings.get(batch.id) ?? 0, errorCount: errors.get(batch.id) ?? 0 }))
     };
   }
+
+  async exportOrders(batchId: string, query: ExportQueryDto) {
+    const allowedExportStatuses = ["ALL", "MATCHED", "PDF_NOT_FOUND", "EXCEL_NOT_FOUND", "DUPLICATE", "PARSE_ERROR"] as const;
+    if (!(["xlsx", "csv"] as const).includes(query.format) || (query.status && !allowedExportStatuses.includes(query.status))) {
+      throw new BadRequestException({ errorCode: "EXPORT_QUERY_INVALID", message: "format or status is not supported." });
+    }
+    const batch = await prisma.batch.findUnique({ where: { id: batchId }, select: { id: true, orderCount: true } });
+    if (!batch) throw new NotFoundException({ errorCode: "BATCH_NOT_FOUND", message: "Batch was not found." });
+    if (batch.orderCount === 0) throw new ConflictException({ errorCode: "BATCH_NOT_MATCHED", message: "Batch chưa có kết quả đối chiếu để xuất." });
+    const where: Prisma.OrderWhereInput = { batchId, ...(query.status && query.status !== "ALL" ? { matchingStatus: query.status } : {}) };
+    const orders = await prisma.order.findMany({ where, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
+    const headers = this.exportColumns.map(([header]) => header);
+    const values = orders.map((order) => this.exportColumns.map(([, field]) => this.exportValue(order[field as keyof typeof order])));
+    const suffix = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+    const filename = `ecomkit-vuikhoe-${batchId.slice(-8)}-${suffix}.${query.format}`;
+    if (query.format === "csv") return { filename, contentType: "text/csv; charset=utf-8", content: Buffer.from(`\uFEFF${[headers, ...values].map((row) => row.map((value) => this.csvCell(value)).join(",")).join("\r\n")}`, "utf8") };
+    const workbook = new ExcelJS.Workbook(); const sheet = workbook.addWorksheet("Ket qua doi chieu");
+    sheet.addRow(headers).font = { bold: true }; sheet.views = [{ state: "frozen", ySplit: 1 }]; sheet.autoFilter = { from: "A1", to: `${String.fromCharCode(64 + headers.length)}1` };
+    values.forEach((row) => sheet.addRow(row.map((value) => value === "" ? null : value)));
+    sheet.columns.forEach((column, index) => { column.width = index === 7 || index === 10 ? 28 : 18; });
+    return { filename, contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", content: Buffer.from(await workbook.xlsx.writeBuffer()) };
+  }
+
+  private exportValue(value: unknown): string { if (value === null || value === undefined) return ""; if (value instanceof Date) return value.toISOString().slice(0, 10); return String(value); }
+  private csvCell(value: string): string { const safe = /^[=+\-@]/.test(value) ? `'${value}` : value; return `"${safe.replaceAll('"', '""')}"`; }
 
   async findErrors(batchId: string, query: ErrorQueryDto) {
     const page = Number(query.page ?? 1), pageSize = Number(query.pageSize ?? 20);
