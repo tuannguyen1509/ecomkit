@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Post, Query, Res, StreamableFile } from "@nestjs/common";
+import { Controller, Get, HttpCode, Inject, Param, Post, Query, Res, StreamableFile } from "@nestjs/common";
 import type { Response } from "express";
 import { BatchIdParamDto } from "./dto/batch-id-param.dto.js";
 import { ResultQueryDto } from "./dto/result-query.dto.js";
@@ -6,10 +6,16 @@ import { ErrorQueryDto } from "./dto/error-query.dto.js";
 import { HistoryQueryDto } from "./dto/history-query.dto.js";
 import { ExportQueryDto } from "./dto/export-query.dto.js";
 import { BatchesService } from "./batches.service.js";
+import { BatchQueueService } from "../queue/batch-queue.service.js";
 
 @Controller("batches")
 export class BatchesController {
-  constructor(@Inject(BatchesService) private readonly batches: BatchesService) {}
+  constructor(@Inject(BatchesService) private readonly batches: BatchesService, @Inject(BatchQueueService) private readonly queue: BatchQueueService) {}
+
+  @Post(":batchId/process") @HttpCode(202)
+  process(@Param() params: BatchIdParamDto) { return this.queue.enqueue(params.batchId); }
+  @Get(":batchId/processing-status")
+  processingStatus(@Param() params: BatchIdParamDto) { return this.queue.status(params.batchId); }
 
   @Post()
   createBatch(): Promise<{ id: string; processingStatus: string; createdAt: Date }> {

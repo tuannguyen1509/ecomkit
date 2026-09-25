@@ -4,6 +4,7 @@ import { FilesModule } from "./files/files.module.js";
 import { ExcelModule } from "./excel/excel.module.js";
 import { PdfModule } from "./pdf/pdf.module.js";
 import { MatchingModule } from "./matching/matching.module.js";
+import { QueueModule } from "./queue/queue.module.js";
 
 @Controller("health")
 class HealthController {
@@ -18,7 +19,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [BatchesModule, FilesModule, ExcelModule, PdfModule, MatchingModule],
+  imports: [BatchesModule, FilesModule, ExcelModule, PdfModule, MatchingModule, QueueModule],
   controllers: [HealthController]
 })
 export class AppModule {}

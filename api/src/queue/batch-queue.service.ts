@@ -1,0 +1,17 @@
+import { ConflictException, Injectable, NotFoundException, OnModuleDestroy, ServiceUnavailableException } from "@nestjs/common";
+import { Queue } from "bullmq";
+import { prisma } from "@ecomkit/database";
+import { getBatchProcessingJobId } from "@ecomkit/shared";
+export const BATCH_QUEUE_NAME = process.env.QUEUE_BATCH_PROCESSING_NAME ?? "batch-processing";
+const connection = { host: process.env.REDIS_HOST ?? "redis", port: Number(process.env.REDIS_PORT ?? "6379") };
+const queueOperationTimeoutMs = Number(process.env.QUEUE_OPERATION_TIMEOUT_MS ?? "5000");
+const withQueueTimeout = async <T>(operation: Promise<T>): Promise<T> => Promise.race([
+  operation,
+  new Promise<T>((_, reject) => setTimeout(() => reject(new Error("QUEUE_OPERATION_TIMEOUT")), queueOperationTimeoutMs)),
+]);
+@Injectable() export class BatchQueueService implements OnModuleDestroy {
+  private readonly queue = new Queue<{ batchId: string }>(BATCH_QUEUE_NAME, { connection: { ...connection, maxRetriesPerRequest: 1, connectTimeout: 3000 } });
+  async enqueue(batchId: string) { const batch = await prisma.batch.findUnique({ where: { id: batchId }, select: { id: true, processingStatus: true, excelFileCount: true, pdfFileCount: true } }); if (!batch) throw new NotFoundException({ errorCode: "BATCH_NOT_FOUND", message: "Batch was not found." }); if (batch.excelFileCount !== 1) throw new ConflictException({ errorCode: "BATCH_EXCEL_FILE_INVALID", message: "Batch requires exactly one Excel file." }); if (!batch.pdfFileCount) throw new ConflictException({ errorCode: "BATCH_PDF_FILE_MISSING", message: "Batch requires at least one PDF file." }); if (batch.processingStatus === "SUCCESS") throw new ConflictException({ errorCode: "BATCH_ALREADY_PROCESSED", message: "Batch has already completed processing." }); const jobId=getBatchProcessingJobId(batchId); try { return await withQueueTimeout((async () => { const existing=await this.queue.getJob(jobId); if(existing)return {batchId,jobId,status:await existing.getState(),duplicate:true}; const job=await this.queue.add("process-batch",{batchId},{jobId,attempts:2,backoff:{type:"exponential",delay:1000},removeOnComplete:{count:100},removeOnFail:{count:500}}); await prisma.processingLog.create({data:{batchId,level:"INFO",message:"Batch queued for processing.",context:{jobId:String(job.id)}}}); return {batchId,jobId:String(job.id),status:"QUEUED",duplicate:false}; })()); } catch(error){throw new ServiceUnavailableException({errorCode:"QUEUE_UNAVAILABLE",message:"Unable to queue Batch processing."},{cause:error as Error});} }
+  async status(batchId:string){const batch=await prisma.batch.findUnique({where:{id:batchId},select:{id:true,processingStatus:true,startedAt:true,finishedAt:true}});if(!batch)throw new NotFoundException({errorCode:"BATCH_NOT_FOUND",message:"Batch was not found."});try{const job=await withQueueTimeout(this.queue.getJob(getBatchProcessingJobId(batchId)));const currentStage=job?await job.getState():null;return {batchId,processingStatus:batch.processingStatus,currentStage,progress:job?.progress??null,jobId:job?String(job.id):null,startedAt:batch.startedAt,completedAt:batch.processingStatus==="SUCCESS"?batch.finishedAt:null,failedAt:batch.processingStatus==="ERROR"?batch.finishedAt:null,lastError:currentStage==="failed"?job?.failedReason??null:null};}catch(error){throw new ServiceUnavailableException({errorCode:"QUEUE_UNAVAILABLE",message:"Unable to read Batch processing status."},{cause:error as Error});}}
+  async onModuleDestroy(){await this.queue.close();}
+}

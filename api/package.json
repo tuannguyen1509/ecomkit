@@ -15,8 +15,8 @@
     "test:matching": "tsx src/matching/matching.integration-test.ts",
     "test:matching-preconditions": "tsx src/matching/matching-preconditions.integration-test.ts",
     "test:results": "tsx src/batches/results.integration-test.ts",
-    "test:errors": "tsx src/batches/errors.integration-test.ts"
-    ,"test:history": "tsx src/batches/history.integration-test.ts",
+    "test:errors": "tsx src/batches/errors.integration-test.ts",
+    "test:history": "tsx src/batches/history.integration-test.ts",
     "test:export": "tsx src/batches/export.integration-test.ts"
   },
   "dependencies": {
@@ -26,6 +26,7 @@
     "@nestjs/core": "^12.0.0",
     "@nestjs/platform-express": "^12.0.0",
     "adm-zip": "0.6.1",
+    "bullmq": "^5.70.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "exceljs": "^4.4.0",
