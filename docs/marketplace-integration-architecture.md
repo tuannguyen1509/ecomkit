@@ -508,3 +508,11 @@ The only open questions are external/provider facts: exact Shopee OAuth and sign
 ```
 
 Marketplace API remains an optional ingestion source. It does not replace the Excel/PDF workflow and does not satisfy Stage 6B Golden validation. Stage 6B stays pending until an approved production Excel reference is available.
+
+## Stage 14B.1 schema implementation record
+
+Stage 14B.1 implements only the foundation data model: `MarketplaceConnection`, `MarketplaceSyncRun`, `MarketplaceExternalOrder`, and `MarketplaceSyncError`, with the status/type/trigger enums defined above. `MarketplaceConnection` stores an opaque nullable `syncCursor` as the committed checkpoint shape; individual runs retain nullable start/result cursors for audit. The one-to-zero-or-one SyncRun-to-Batch link is nullable and unique.
+
+No credential envelope, access token, refresh token, app secret, provider service, adapter, queue processor, endpoint, or UI is introduced in this migration. Credential fields are deliberately deferred to Stage 14B.2 with the `MarketplaceCredentialService`. The active-run invariant is supported by SyncRun indexes but its transactional/queue locking enforcement is also deferred to the later service and queue foundation; no speculative PostgreSQL partial unique index is introduced.
+
+Connection/source/run/error history uses restrictive or set-null foreign-key behavior rather than cascade deletion. Connections remain soft-disabled through their status. Existing Batch, Order, OrderItem, ProcessingError, authentication, and Excel/PDF behavior are unchanged.

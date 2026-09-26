@@ -46,30 +46,63 @@ enum ProcessingLogLevel {
   WARNING
   ERROR
 }
+
+enum MarketplaceConnectionStatus {
+  PENDING_AUTH
+  ACTIVE
+  REAUTH_REQUIRED
+  DISABLED
+}
+
+enum MarketplaceSyncType {
+  INITIAL
+  INCREMENTAL
+}
+
+enum MarketplaceSyncTrigger {
+  MANUAL
+  SCHEDULED
+  SYSTEM
+}
+
+enum MarketplaceSyncStatus {
+  PENDING
+  QUEUED
+  PROCESSING
+  SUCCESS
+  ERROR
+}
+
 enum UserRole {
   ADMIN
   USER
 }
+
 model User {
-  id String @id @default(cuid())
-  username String @unique
-  displayName String @map("display_name")
-  passwordHash String @map("password_hash")
-  role UserRole @default(USER)
-  isActive Boolean @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  sessions Session[]
+  id                            String                  @id @default(cuid())
+  username                      String                  @unique
+  displayName                   String                  @map("display_name")
+  passwordHash                  String                  @map("password_hash")
+  role                          UserRole                @default(USER)
+  isActive                      Boolean                 @default(true) @map("is_active")
+  createdAt                     DateTime                @default(now()) @map("created_at")
+  updatedAt                     DateTime                @updatedAt @map("updated_at")
+  sessions                      Session[]
+  marketplaceConnectionsCreated MarketplaceConnection[] @relation("MarketplaceConnectionCreatedBy")
+  marketplaceSyncRunsTriggered  MarketplaceSyncRun[]    @relation("MarketplaceSyncRunTriggeredBy")
+
   @@map("users")
 }
+
 model Session {
-  id String @id @default(cuid())
-  userId String @map("user_id")
-  tokenHash String @unique @map("token_hash")
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
   lastUsedAt DateTime @default(now()) @map("last_used_at")
-  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
@@ -91,14 +124,112 @@ model Batch {
   createdAt        DateTime         @default(now()) @map("created_at")
   updatedAt        DateTime         @updatedAt @map("updated_at")
 
-  uploadedFiles    UploadedFile[]
-  orders           Order[]
-  processingLogs   ProcessingLog[]
-  processingErrors ProcessingError[]
+  uploadedFiles      UploadedFile[]
+  orders             Order[]
+  processingLogs     ProcessingLog[]
+  processingErrors   ProcessingError[]
+  marketplaceSyncRun MarketplaceSyncRun?
 
   @@index([createdAt])
   @@index([processingStatus])
   @@map("batches")
+}
+
+model MarketplaceConnection {
+  id                   String                      @id @default(cuid())
+  platform             Platform
+  externalShopId       String                      @map("external_shop_id")
+  shopName             String?                     @map("shop_name")
+  status               MarketplaceConnectionStatus @default(PENDING_AUTH)
+  lastSuccessfulSyncAt DateTime?                   @map("last_successful_sync_at")
+  lastAttemptedSyncAt  DateTime?                   @map("last_attempted_sync_at")
+  syncCursor           String?                     @map("sync_cursor")
+  createdByUserId      String?                     @map("created_by_user_id")
+  createdAt            DateTime                    @default(now()) @map("created_at")
+  updatedAt            DateTime                    @updatedAt @map("updated_at")
+
+  createdBy      User?                      @relation("MarketplaceConnectionCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  syncRuns       MarketplaceSyncRun[]
+  externalOrders MarketplaceExternalOrder[]
+
+  @@unique([platform, externalShopId])
+  @@index([status])
+  @@index([createdByUserId])
+  @@map("marketplace_connections")
+}
+
+model MarketplaceSyncRun {
+  id                String                 @id @default(cuid())
+  connectionId      String                 @map("connection_id")
+  batchId           String?                @unique @map("batch_id")
+  syncType          MarketplaceSyncType    @map("sync_type")
+  triggerType       MarketplaceSyncTrigger @map("trigger_type")
+  status            MarketplaceSyncStatus  @default(PENDING)
+  startedAt         DateTime?              @map("started_at")
+  completedAt       DateTime?              @map("completed_at")
+  windowStart       DateTime?              @map("window_start")
+  windowEnd         DateTime?              @map("window_end")
+  startCursor       String?                @map("start_cursor")
+  resultCursor      String?                @map("result_cursor")
+  ordersFetched     Int                    @default(0) @map("orders_fetched")
+  ordersNormalized  Int                    @default(0) @map("orders_normalized")
+  ordersCreated     Int                    @default(0) @map("orders_created")
+  ordersUpdated     Int                    @default(0) @map("orders_updated")
+  warningCount      Int                    @default(0) @map("warning_count")
+  errorCount        Int                    @default(0) @map("error_count")
+  triggeredByUserId String?                @map("triggered_by_user_id")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  updatedAt         DateTime               @updatedAt @map("updated_at")
+
+  connection  MarketplaceConnection  @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+  batch       Batch?                 @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  triggeredBy User?                  @relation("MarketplaceSyncRunTriggeredBy", fields: [triggeredByUserId], references: [id], onDelete: SetNull)
+  errors      MarketplaceSyncError[]
+
+  @@index([connectionId, status])
+  @@index([connectionId, createdAt])
+  @@index([status])
+  @@map("marketplace_sync_runs")
+}
+
+model MarketplaceExternalOrder {
+  id                 String    @id @default(cuid())
+  connectionId       String    @map("connection_id")
+  marketplaceOrderId String    @map("marketplace_order_id")
+  rawProviderStatus  String?   @map("raw_provider_status")
+  providerCreatedAt  DateTime? @map("provider_created_at")
+  providerUpdatedAt  DateTime? @map("provider_updated_at")
+  lastSeenAt         DateTime  @default(now()) @map("last_seen_at")
+  rawData            Json?     @map("raw_data")
+  normalizedData     Json?     @map("normalized_data")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  connection MarketplaceConnection @relation(fields: [connectionId], references: [id], onDelete: Restrict)
+
+  @@unique([connectionId, marketplaceOrderId])
+  @@index([connectionId, providerUpdatedAt])
+  @@map("marketplace_external_orders")
+}
+
+model MarketplaceSyncError {
+  id              String   @id @default(cuid())
+  syncRunId       String   @map("sync_run_id")
+  operation       String
+  internalCode    String   @map("internal_code")
+  externalCode    String?  @map("external_code")
+  httpStatus      Int?     @map("http_status")
+  retryable       Boolean  @default(false)
+  message         String   @db.Text
+  suggestedAction String?  @map("suggested_action") @db.Text
+  safeContext     Json?    @map("safe_context")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  syncRun MarketplaceSyncRun @relation(fields: [syncRunId], references: [id], onDelete: Restrict)
+
+  @@index([syncRunId, createdAt])
+  @@index([internalCode])
+  @@map("marketplace_sync_errors")
 }
 
 model UploadedFile {
