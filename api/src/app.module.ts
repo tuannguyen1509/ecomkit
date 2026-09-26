@@ -7,6 +7,7 @@ import { MatchingModule } from "./matching/matching.module.js";
 import { QueueModule } from "./queue/queue.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { Public } from "./auth/auth.decorators.js";
+import { MarketplaceModule } from "./marketplace/marketplace.module.js";
 
 @Controller("health")
 @Public()
@@ -22,7 +23,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [AuthModule, BatchesModule, FilesModule, ExcelModule, PdfModule, MatchingModule, QueueModule],
+  imports: [AuthModule, BatchesModule, FilesModule, ExcelModule, PdfModule, MatchingModule, QueueModule, MarketplaceModule],
   controllers: [HealthController]
 })
 export class AppModule {}

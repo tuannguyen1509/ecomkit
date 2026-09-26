@@ -22,6 +22,8 @@ Uploads are stored under the configured storage root with generated UUID filenam
 
 Do not log passwords, cookies, session tokens, Worker keys, token/password hashes, or `DATABASE_URL`. `WORKER_INTERNAL_API_KEY` belongs only in the runtime environment of API and Worker; rotate it by generating a replacement, updating both environments, recreating both containers, and verifying one queue job.
 
+Marketplace shop credentials use a separate runtime secret, `MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY`, which must be a Base64 encoding of exactly 32 random bytes and must be supplied to API and Worker environments before marketplace processing is enabled. Connection records retain only an AES-256-GCM versioned ciphertext envelope; access tokens, refresh tokens, authorization codes, and provider app secrets must never be logged, returned to Web clients, written to Redis payloads, or persisted as plaintext. Provider application secrets remain environment/secret-manager data, not database fields.
+
 The Compose API and Web services publish local development ports. PostgreSQL and Redis remain internal to the Compose network. The development images currently run as root because API/Worker use a host-mounted storage directory and `tsx watch`; moving production images to a non-root runtime user requires a storage ownership deployment check before enabling it.
 
 ## Residual risks

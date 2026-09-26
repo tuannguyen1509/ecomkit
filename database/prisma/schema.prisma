@@ -144,6 +144,7 @@ model MarketplaceConnection {
   lastSuccessfulSyncAt DateTime?                   @map("last_successful_sync_at")
   lastAttemptedSyncAt  DateTime?                   @map("last_attempted_sync_at")
   syncCursor           String?                     @map("sync_cursor")
+  credentialEnvelope   String?                     @map("credential_envelope") @db.Text
   createdByUserId      String?                     @map("created_by_user_id")
   createdAt            DateTime                    @default(now()) @map("created_at")
   updatedAt            DateTime                    @updatedAt @map("updated_at")
