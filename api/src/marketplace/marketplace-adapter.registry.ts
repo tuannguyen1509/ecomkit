@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Platform } from "@ecomkit/database";
-import type { MarketplaceAdapter } from "./marketplace-adapter.js";
+import type { MarketplaceAdapter } from "@ecomkit/shared";
 
 export class MarketplaceAdapterRegistryError extends Error {
   constructor(public readonly code: "MARKETPLACE_ADAPTER_NOT_REGISTERED" | "MARKETPLACE_ADAPTER_ALREADY_REGISTERED") {

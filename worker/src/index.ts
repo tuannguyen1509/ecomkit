@@ -1,6 +1,7 @@
 import { UnrecoverableError, Worker } from "bullmq";
 import { prisma } from "@ecomkit/database";
 import { requireWorkerInternalApiKey } from "./worker-config.js";
+import { startMarketplaceSyncWorker, MARKETPLACE_SYNC_QUEUE_NAME } from "./marketplace-sync.worker.js";
 
 const queueName = process.env.QUEUE_BATCH_PROCESSING_NAME ?? "batch-processing";
 const connection = { host: process.env.REDIS_HOST ?? "redis", port: Number(process.env.REDIS_PORT ?? "6379") };
@@ -62,11 +63,15 @@ const worker = new Worker<{ batchId: string }>(queueName, async (job) => {
   }
 }, { connection, concurrency: 1 });
 
+const marketplaceWorker = startMarketplaceSyncWorker();
+
 worker.on("failed", (job, error) => console.error("Batch job failed", job?.id, error.message));
 console.log(`Ecomkit Worker started: ${queueName}`);
+console.log(`Ecomkit Marketplace Worker started: ${MARKETPLACE_SYNC_QUEUE_NAME}`);
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`Ecomkit Worker stopping (${signal})`);
+  await marketplaceWorker.close();
   await worker.close();
   await prisma.$disconnect();
   process.exit(0);

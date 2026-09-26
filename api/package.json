@@ -22,6 +22,7 @@
     "test:auth-guards": "tsx src/auth/auth-guards.integration-test.ts",
     "test:admin-users": "tsx src/auth/admin-users.integration-test.ts",
     "test:marketplace-core": "tsx src/marketplace/marketplace-core.integration-test.ts",
+    "test:marketplace-sync": "tsx src/marketplace/marketplace-sync.integration-test.ts",
     "auth:bootstrap-admin": "tsx src/auth/bootstrap-admin.ts"
   },
   "dependencies": {

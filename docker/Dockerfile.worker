@@ -15,4 +15,5 @@ COPY shared shared
 COPY database database
 RUN DATABASE_URL=postgresql://placeholder:placeholder@postgres:5432/ecomkit npm run db:generate --workspace database
 RUN npm run build --workspace database
+RUN npm run build --workspace shared
 CMD ["npm", "run", "dev", "--workspace", "worker"]

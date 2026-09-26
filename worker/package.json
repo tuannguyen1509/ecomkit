@@ -8,10 +8,12 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:internal-auth": "tsx --tsconfig tsconfig.json src/worker-config.test.ts",
+    "test:marketplace-sync": "tsx --tsconfig tsconfig.json src/marketplace-sync.integration-test.ts",
     "test": "node -e \"console.log('worker foundation test passed')\""
   },
   "dependencies": {
     "@ecomkit/database": "^0.1.0",
+    "@ecomkit/shared": "*",
     "bullmq": "^5.70.0"
   }
 }

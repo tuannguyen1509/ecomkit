@@ -13,3 +13,8 @@ The Worker requires `WORKER_INTERNAL_API_KEY` at startup and sends it only in `X
 The authenticated Docker queue flow is intentionally unchanged: a human session can enqueue a batch, while the Worker uses only its internal header for the three processing stages. The browser session and Worker key are never placed in the BullMQ payload.
 
 Stage 13A classifies deterministic parser/business failures as non-retryable BullMQ errors. They fail after one attempt; timeout, network, and 5xx/internal API failures retain the existing two-attempt retry policy.
+# Marketplace sync queue (Stage 14B.3)
+
+The Worker container hosts two independent BullMQ Workers: existing `batch-processing` and `marketplace-sync`. Marketplace job data is limited to `connectionId` and `syncRunId`; it must never contain credentials, encrypted envelopes, provider payloads, buyer data, or browser sessions. The generic marketplace queue uses two retry attempts with exponential backoff. It serializes active syncs per connection through both the API transaction guard and a Redis ownership lock, while allowing different shops to run concurrently.
+
+The current adapter is test-only and enabled only with `MARKETPLACE_ENABLE_MOCK_ADAPTER=true`; normal runtime registers no marketplace provider. Real provider adapters, OAuth, scheduling, and production API calls remain out of scope.

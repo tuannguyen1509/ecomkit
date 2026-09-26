@@ -14,4 +14,17 @@ export type {
   MarketplaceShopCredential,
   RedactedMarketplaceShopCredential
 } from "./marketplace-credential-crypto";
+export type {
+  MarketplaceAdapter,
+  MarketplaceAdapterAuthorizationCodeInput,
+  MarketplaceAdapterAuthorizationInput,
+  MarketplaceAdapterAuthorizationResult,
+  MarketplaceAdapterConnectionIdentity,
+  MarketplaceAdapterOrderListInput,
+  MarketplaceAdapterOrderPage,
+  MarketplaceSupportedPlatform,
+  NormalizedMarketplaceOrder,
+  NormalizedMarketplaceOrderItem
+} from "./marketplace-adapter-contract";
 export const getBatchProcessingJobId = (batchId: string): string => `batch-${batchId}`;
+export const getMarketplaceSyncJobId = (syncRunId: string): string => `marketplace-sync-${syncRunId}`;

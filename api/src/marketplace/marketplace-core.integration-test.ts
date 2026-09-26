@@ -22,6 +22,7 @@ const expectCryptoError = (callback: () => unknown, code: string): void => {
 
 const mockAdapter: MarketplaceAdapter = {
   platform: Platform.SHOPEE,
+  requiresCredential: false,
   async getAuthorizationUrl() { return { authorizationUrl: "https://example.invalid/authorize" }; },
   async exchangeAuthorizationCode() { return { credential: { accessToken: "synthetic" }, connection: { externalShopId: "synthetic-shop" } }; },
   async refreshAccessToken(credential) { return credential; },
