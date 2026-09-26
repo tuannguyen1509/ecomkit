@@ -11,3 +11,5 @@ The worker runs with concurrency `1` and calls the existing API parser and match
 The Worker requires `WORKER_INTERNAL_API_KEY` at startup and sends it only in `X-Ecomkit-Worker-Key` through its shared internal API helper. The API accepts that header only for its explicitly internal Excel, PDF, and matching routes. The key is never included in queue data, ProcessingLog, or browser requests; jobs still contain only `{ batchId }`. API and Worker must receive the same non-secret-managed deployment value. The Worker key is not an ADMIN credential and cannot call `/process` or browse history, results, errors, or exports.
 
 The authenticated Docker queue flow is intentionally unchanged: a human session can enqueue a batch, while the Worker uses only its internal header for the three processing stages. The browser session and Worker key are never placed in the BullMQ payload.
+
+Stage 13A classifies deterministic parser/business failures as non-retryable BullMQ errors. They fail after one attempt; timeout, network, and 5xx/internal API failures retain the existing two-attempt retry policy.

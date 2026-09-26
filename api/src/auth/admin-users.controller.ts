@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Inject, Param, Patch, Post, Req } from "@nestjs/common";
 import { UserRole } from "@ecomkit/database";
-import { Roles } from "./auth.decorators.js";
+import { RateLimit, Roles } from "./auth.decorators.js";
 import type { AuthenticatedRequest } from "./auth.guard.js";
 import { AdminUsersService } from "./admin-users.service.js";
 import { CreateAdminUserDto, ResetAdminUserPasswordDto, UpdateAdminUserDto, UserIdParamDto } from "./admin-users.dto.js";
@@ -14,6 +14,7 @@ export class AdminUsersController {
   list() { return this.users.list(); }
 
   @Post()
+  @RateLimit({ scope: "admin-create-user", limit: 10, windowMs: 60_000 })
   @HttpCode(201)
   create(@Body() body: CreateAdminUserDto) { return this.users.create(body); }
 
@@ -23,6 +24,7 @@ export class AdminUsersController {
   }
 
   @Post(":userId/reset-password")
+  @RateLimit({ scope: "admin-reset-password", limit: 10, windowMs: 60_000 })
   @HttpCode(200)
   resetPassword(@Param() params: UserIdParamDto, @Body() body: ResetAdminUserPasswordDto) {
     return this.users.resetPassword(params.userId, body);

@@ -7,12 +7,14 @@ import { HistoryQueryDto } from "./dto/history-query.dto.js";
 import { ExportQueryDto } from "./dto/export-query.dto.js";
 import { BatchesService } from "./batches.service.js";
 import { BatchQueueService } from "../queue/batch-queue.service.js";
+import { RateLimit } from "../auth/auth.decorators.js";
 
 @Controller("batches")
 export class BatchesController {
   constructor(@Inject(BatchesService) private readonly batches: BatchesService, @Inject(BatchQueueService) private readonly queue: BatchQueueService) {}
 
   @Post(":batchId/process") @HttpCode(202)
+  @RateLimit({ scope: "batch-process", limit: 20, windowMs: 60_000 })
   process(@Param() params: BatchIdParamDto) { return this.queue.enqueue(params.batchId); }
   @Get(":batchId/processing-status")
   processingStatus(@Param() params: BatchIdParamDto) { return this.queue.status(params.batchId); }

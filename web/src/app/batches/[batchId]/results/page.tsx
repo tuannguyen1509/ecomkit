@@ -34,10 +34,6 @@ function sourceIndicator(order: ResultOrder, source: "EXCEL" | "PDF"): string {
   return source === "EXCEL" ? "Excel ✓" : "PDF ✓";
 }
 
-function resultUrl(batchId: string, params: URLSearchParams): string {
-  return `${apiBaseUrl}/batches/${encodeURIComponent(batchId)}/results?${params.toString()}`;
-}
-
 export default function BatchResultsPage() {
   const route = useParams<{ batchId: string }>();
   const batchId = route.batchId;

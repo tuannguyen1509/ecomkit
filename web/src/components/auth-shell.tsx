@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { apiFetch, apiJson } from "../lib/api";
+import { apiFetch } from "../lib/api";
 import styles from "./auth-shell.module.css";
 
 export type CurrentUser = { id: string; username: string; displayName: string; role: "ADMIN" | "USER" };
@@ -30,9 +30,11 @@ export function AuthShell({ children }: { children: ReactNode }) {
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     const unauthorized = () => { setUser(null); router.replace("/login"); };
+    const authenticated = () => { setLoading(true); void load(); };
     window.addEventListener("ecomkit:unauthorized", unauthorized);
-    return () => window.removeEventListener("ecomkit:unauthorized", unauthorized);
-  }, [router]);
+    window.addEventListener("ecomkit:authenticated", authenticated);
+    return () => { window.removeEventListener("ecomkit:unauthorized", unauthorized); window.removeEventListener("ecomkit:authenticated", authenticated); };
+  }, [load, router]);
   useEffect(() => {
     if (!loading && !user && !loginRoute) router.replace("/login");
     if (!loading && user && loginRoute) router.replace("/");

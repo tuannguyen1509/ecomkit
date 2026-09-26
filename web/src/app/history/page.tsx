@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "./history.module.css";
-import { apiBaseUrl as api, apiFetch } from "../../lib/api";
+import { apiFetch } from "../../lib/api";
 
 type Item = { id: string; createdAt: string; processingStatus: "PENDING" | "PROCESSING" | "SUCCESS" | "WARNING" | "ERROR"; fileCount: number; excelFileCount: number; pdfFileCount: number; orderCount: number; matchedCount: number; warningCount: number; errorCount: number };
 type Response = { pagination: { page: number; pageSize: number; total: number; totalPages: number }; items: Item[] };

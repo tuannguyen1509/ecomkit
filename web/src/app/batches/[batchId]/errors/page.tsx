@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "./errors.module.css";
-import { apiBaseUrl, apiFetch } from "../../../../lib/api";
+import { apiFetch } from "../../../../lib/api";
 
 type Severity = "SUCCESS" | "WARNING" | "ERROR";
 type ErrorItem = { id: string; severity: Severity; errorCode: string; message: string; sheetName: string | null; pageNumber: number | null; rowNumber: number | null; columnName: string | null; fieldName: string | null; createdAt: string; uploadedFile: { id: string; originalFilename: string; fileType: string; platform: string } | null };

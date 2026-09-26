@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Inject, Post, Req, Res, UnauthorizedException } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { Public } from "./auth.decorators.js";
+import { Public, RateLimit } from "./auth.decorators.js";
 import type { AuthenticatedRequest } from "./auth.guard.js";
 import { AuthService, type SafeUser } from "./auth.service.js";
 
@@ -31,6 +31,7 @@ export class AuthController {
   @Post("login")
   @HttpCode(200)
   @Public()
+  @RateLimit({ scope: "auth-login", limit: 8, windowMs: 60_000 })
   async login(@Body() body: { username?: string; password?: string }, @Res({ passthrough: true }) response: Response): Promise<{ user: SafeUser }> {
     const result = await this.authService.login(body.username ?? "", body.password ?? "");
     response.cookie(SESSION_COOKIE, result.token, this.sessionCookieOptions());

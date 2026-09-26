@@ -64,3 +64,7 @@ The shell provides Dashboard, batch processing, history, result/error pages, exp
 The Docker flow was verified with a synthetic batch: a human signs in with the HttpOnly session cookie, uploads Excel and PDF files, and calls only `POST /api/batches/:batchId/process`. BullMQ still receives only `{ batchId }`; the Worker uses its internal principal for Excel, PDF, and matching, and the batch reaches `SUCCESS`. Result, error, history, and XLSX/CSV export remain available to the signed-in human user.
 
 The Worker key alone is rejected from user-facing routes, including process, processing status, history, results, errors, and export. Invalid or missing Worker keys are rejected on internal parser routes. Logout invalidates the session so subsequent `/auth/me` and business API requests are unauthorized.
+
+## Stage 13A hardening
+
+Login is rate-limited to eight attempts per IP and normalized username per minute. ADMIN credential mutations are rate-limited as well. Browser-session mutations that include an `Origin` header must match `WEB_ORIGIN`; Worker calls remain exempt from browser-Origin validation and retain their least-privilege route allowlist. See [security-hardening.md](security-hardening.md) for operational details and Worker-key rotation.
