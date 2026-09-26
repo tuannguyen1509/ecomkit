@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "./errors.module.css";
+import { apiBaseUrl, apiFetch } from "../../../../lib/api";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
 type Severity = "SUCCESS" | "WARNING" | "ERROR";
 type ErrorItem = { id: string; severity: Severity; errorCode: string; message: string; sheetName: string | null; pageNumber: number | null; rowNumber: number | null; columnName: string | null; fieldName: string | null; createdAt: string; uploadedFile: { id: string; originalFilename: string; fileType: string; platform: string } | null };
 type ErrorResponse = { batch: { id: string }; summary: { totalErrors: number; warningCount: number; errorCount: number }; pagination: { page: number; pageSize: number; total: number; totalPages: number }; files: Array<{ id: string; originalFilename: string; fileType: string }>; items: ErrorItem[] };
@@ -38,7 +38,7 @@ export default function BatchErrorsPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const response = await fetch(`${apiBaseUrl}/batches/${encodeURIComponent(batchId)}/errors?${query.toString()}`, { cache: "no-store" });
+      const response = await apiFetch(`/batches/${encodeURIComponent(batchId)}/errors?${query.toString()}`);
       if (!response.ok) { setError(response.status === 404 ? "not-found" : "request"); return; }
       setData(await response.json() as ErrorResponse);
     } catch { setError("request"); } finally { setLoading(false); }
@@ -51,7 +51,7 @@ export default function BatchErrorsPage() {
     router.push(`${pathname}?${next.toString()}`);
   };
   const openDetail = async (id: string) => {
-    const response = await fetch(`${apiBaseUrl}/batches/${encodeURIComponent(batchId)}/errors/${encodeURIComponent(id)}`, { cache: "no-store" });
+    const response = await apiFetch(`/batches/${encodeURIComponent(batchId)}/errors/${encodeURIComponent(id)}`);
     if (response.ok) setDetail(await response.json() as ErrorDetail);
   };
   const hasFilters = Boolean(query.get("severity") || query.get("errorCode") || query.get("uploadedFileId"));

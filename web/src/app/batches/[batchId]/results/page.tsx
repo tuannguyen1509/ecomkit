@@ -4,8 +4,8 @@ import { useParams, usePathname, useRouter, useSearchParams } from "next/navigat
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BatchResultsResponse, MatchingStatus, ResultOrder } from "../../../../types/results";
 import styles from "./results.module.css";
+import { apiBaseUrl, apiFetch } from "../../../../lib/api";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
 const statusLabels: Record<MatchingStatus, string> = {
   MATCHED: "Đã đối chiếu",
   PDF_NOT_FOUND: "Không thấy trong PDF",
@@ -59,7 +59,7 @@ export default function BatchResultsPage() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(resultUrl(batchId, query), { cache: "no-store" });
+      const response = await apiFetch(`/batches/${encodeURIComponent(batchId)}/results?${query.toString()}`);
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { message?: string } | null;
         setError({

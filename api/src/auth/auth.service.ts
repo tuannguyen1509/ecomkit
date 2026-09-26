@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { prisma, type UserRole } from "@ecomkit/database";
+import { prisma, type Prisma, type UserRole } from "@ecomkit/database";
 
 const scrypt = promisify(scryptCallback);
 const PASSWORD_KEY_LENGTH = 64;
@@ -70,6 +70,10 @@ export class AuthService {
     if (!token) return;
     const tokenHash = createHash("sha256").update(token).digest("hex");
     await prisma.session.deleteMany({ where: { tokenHash } });
+  }
+
+  async revokeAllSessions(userId: string, client: Pick<Prisma.TransactionClient, "session"> = prisma): Promise<void> {
+    await client.session.deleteMany({ where: { userId } });
   }
 
   async bootstrapFirstAdmin(): Promise<boolean> {

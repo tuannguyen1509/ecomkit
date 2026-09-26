@@ -9,9 +9,4 @@ body {
   color: #17202a;
 }
 
-main:not(.page) {
-  max-width: 720px;
-  margin: 12rem auto;
-  padding: 2rem;
-  text-align: center;
-}
+button,input,select{font:inherit}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #3b9d85;outline-offset:2px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

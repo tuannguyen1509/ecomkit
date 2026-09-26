@@ -3,8 +3,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "./history.module.css";
+import { apiBaseUrl as api, apiFetch } from "../../lib/api";
 
-const api = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
 type Item = { id: string; createdAt: string; processingStatus: "PENDING" | "PROCESSING" | "SUCCESS" | "WARNING" | "ERROR"; fileCount: number; excelFileCount: number; pdfFileCount: number; orderCount: number; matchedCount: number; warningCount: number; errorCount: number };
 type Response = { pagination: { page: number; pageSize: number; total: number; totalPages: number }; items: Item[] };
 const labels: Record<Item["processingStatus"], string> = { PENDING: "Chờ xử lý", PROCESSING: "Đang xử lý", SUCCESS: "Hoàn tất", WARNING: "Hoàn tất có cảnh báo", ERROR: "Có lỗi" };
@@ -15,7 +15,7 @@ function HistoryContent() {
   const router = useRouter(), pathname = usePathname(), search = useSearchParams();
   const [data, setData] = useState<Response | null>(null), [loading, setLoading] = useState(true), [failed, setFailed] = useState(false);
   const query = useMemo(() => { const next = new URLSearchParams(search.toString()); if (!next.get("page")) next.set("page", "1"); if (!next.get("pageSize")) next.set("pageSize", "20"); return next; }, [search]);
-  const load = useCallback(async () => { setLoading(true); setFailed(false); try { const response = await fetch(`${api}/batches/history?${query}`, { cache: "no-store" }); if (!response.ok) throw new Error(); setData(await response.json() as Response); } catch { setFailed(true); } finally { setLoading(false); } }, [query]);
+  const load = useCallback(async () => { setLoading(true); setFailed(false); try { const response = await apiFetch(`/batches/history?${query}`); if (!response.ok) throw new Error(); setData(await response.json() as Response); } catch { setFailed(true); } finally { setLoading(false); } }, [query]);
   useEffect(() => { void Promise.resolve().then(load); }, [load]);
   const setQuery = (changes: Record<string, string | undefined>) => { const next = new URLSearchParams(query); Object.entries(changes).forEach(([key, value]) => value ? next.set(key, value) : next.delete(key)); router.push(`${pathname}?${next}`); };
   const filtered = Boolean(query.get("status"));

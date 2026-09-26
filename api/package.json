@@ -20,6 +20,7 @@
     "test:export": "tsx src/batches/export.integration-test.ts",
     "test:auth": "tsx src/auth/auth.integration-test.ts",
     "test:auth-guards": "tsx src/auth/auth-guards.integration-test.ts",
+    "test:admin-users": "tsx src/auth/admin-users.integration-test.ts",
     "auth:bootstrap-admin": "tsx src/auth/bootstrap-admin.ts"
   },
   "dependencies": {
