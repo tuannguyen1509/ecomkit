@@ -24,6 +24,7 @@
     "test:marketplace-core": "tsx src/marketplace/marketplace-core.integration-test.ts",
     "test:marketplace-sync": "tsx src/marketplace/marketplace-sync.integration-test.ts",
     "test:marketplace-redis-outage": "tsx src/marketplace/marketplace-redis-outage.integration-test.ts",
+    "test:shopee-oauth": "tsx src/marketplace/shopee-oauth.integration-test.ts",
     "test:batch-queue-authenticated": "tsx src/queue/batch-queue-authenticated.integration-test.ts",
     "auth:bootstrap-admin": "tsx src/auth/bootstrap-admin.ts"
   },
@@ -38,6 +39,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "exceljs": "^4.4.0",
+    "ioredis": "^5.9.2",
     "pdfjs-dist": "^6.3.289",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"

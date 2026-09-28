@@ -23,6 +23,7 @@ export type MarketplaceShopCredential = {
   accessToken?: string;
   refreshToken?: string;
   tokenExpiresAt?: string;
+  refreshTokenExpiresAt?: string;
   authorizationExpiresAt?: string;
   scopes?: string[];
   providerMetadata?: Record<string, unknown>;
@@ -40,6 +41,7 @@ export type RedactedMarketplaceShopCredential = {
   hasAccessToken: boolean;
   hasRefreshToken: boolean;
   tokenExpiresAt?: string;
+  refreshTokenExpiresAt?: string;
   authorizationExpiresAt?: string;
   scopeCount: number;
   providerMetadataKeys: string[];
@@ -165,6 +167,7 @@ export function redactMarketplaceCredential(credential: MarketplaceShopCredentia
     hasAccessToken: Boolean(credential.accessToken),
     hasRefreshToken: Boolean(credential.refreshToken),
     ...(credential.tokenExpiresAt ? { tokenExpiresAt: credential.tokenExpiresAt } : {}),
+    ...(credential.refreshTokenExpiresAt ? { refreshTokenExpiresAt: credential.refreshTokenExpiresAt } : {}),
     ...(credential.authorizationExpiresAt ? { authorizationExpiresAt: credential.authorizationExpiresAt } : {}),
     scopeCount: credential.scopes?.length ?? 0,
     providerMetadataKeys: Object.keys(credential.providerMetadata ?? {}).sort()
