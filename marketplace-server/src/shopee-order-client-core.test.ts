@@ -50,5 +50,6 @@ const missingDetail = new ShopeeOrderClientCore({ ensureValidAccessToken: async 
 try { await missingDetail.getCompleteOrderDetails("c", ["A", "B"]); throw new Error("missing detail accepted"); } catch (error) { if (!(error instanceof ShopeeOrderClientError)) throw error; }
 const duplicateDetail = new ShopeeOrderClientCore({ ensureValidAccessToken: async () => token }, { ...transport, details: async () => ({ orders: [{ order_sn: "A" }, { order_sn: "A" }] }) });
 try { await duplicateDetail.getOrderDetails("c", ["A"]); throw new Error("duplicate detail accepted"); } catch (error) { if (!(error instanceof ShopeeOrderClientError)) throw error; }
+try { await core.getOrderDetails("c", []); throw new Error("empty detail input accepted"); } catch (error) { if (!(error instanceof ShopeeOrderClientError)) throw error; }
 
 console.log("Shopee order client core tests passed");

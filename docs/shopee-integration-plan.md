@@ -258,8 +258,12 @@ Before API cutover, the active API client contract was inventoried. All direct c
 
 | Active API method | Shared-core equivalent | Status |
 | --- | --- | --- |
-| `listOrders` | `ShopeeOrderClientCore.listOrders` | Complete: exactly one provider request, opaque cursor input/output, page metadata, 15-day and page-size validation. |
-| `listAllInWindow` | `ShopeeOrderClientCore.listAllInWindow` | Complete: reuses the single-page primitive and rejects missing/repeated continuation cursors. |
-| `getOrderDetails` | `ShopeeOrderClientCore.getOrderDetails` | Complete: sequential max-50 batching, provider response ordering, duplicate rejection, and explicit `missingOrderSns`. |
+| `listOrders` | `ShopeeOrderClientCore.listOrders` | API CUTOVER COMPLETE: exactly one provider request, opaque cursor input/output, page metadata, 15-day and page-size validation. |
+| `listAllInWindow` | `ShopeeOrderClientCore.listAllInWindow` | API CUTOVER COMPLETE: reuses the single-page primitive and rejects missing/repeated continuation cursors. |
+| `getOrderDetails` | `ShopeeOrderClientCore.getOrderDetails` | API CUTOVER COMPLETE: sequential max-50 batching, provider response ordering, duplicate rejection, and explicit `missingOrderSns`. |
 
-`collectOrderSns` remains the stricter collection helper for future adapter orchestration: it splits longer history ranges, follows pages, validates canonical non-empty `order_sn`, and deduplicates exact identifiers. `getCompleteOrderDetails` remains the strict helper for future adapters that require no partial result or unrelated identity. The shared core is still unconnected to API and Worker runtime; Stage 14C.4B.2A.2a.2 will only wire the API facade to these equivalent shared operations.
+`collectOrderSns` remains the stricter collection helper for future adapter orchestration: it splits longer history ranges, follows pages, validates canonical non-empty `order_sn`, and deduplicates exact identifiers. `getCompleteOrderDetails` remains the strict helper for future adapters that require no partial result or unrelated identity.
+
+## Stage 14C.4B.2A.2a.2 API order-client cutover
+
+The API `ShopeeOrderClient` is now a thin Nest facade over `ShopeeOrderClientCore`. An API trusted-access adapter delegates only to the existing `ShopeeTokenService`/shared credential lifecycle, while the API transport adapter delegates only to the existing signed `ShopeeHttpClient`. The facade retains the three API contracts (`listOrders`, `listAllInWindow`, and `getOrderDetails`) and maps safe domain errors to Nest errors. It has no list pagination, window, batching, cursor, or provider-request orchestration. Worker OrderClient wiring, a Shopee adapter, normalization, and production registry registration remain deferred.

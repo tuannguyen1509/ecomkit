@@ -80,7 +80,7 @@ export class ShopeeOrderClientCore {
 
   /** API-compatible result: preserves provider order and explicitly reports missing details. */
   async getOrderDetails(connectionId: string, orderSns: readonly string[], options: ShopeeOrderDetailOptions = {}): Promise<ShopeeOrderDetailsResult> {
-    if (!orderSns.length) return { orders: [], missingOrderSns: [] };
+    if (!orderSns.length) throw new ShopeeOrderClientError("SHOPEE_ORDER_INVALID_ORDER_SN", false);
     const credential = await this.credentials.ensureValidAccessToken(connectionId);
     const received = new Map<string, ShopeeOrderDetail>();
     for (const batch of batchShopeeOrderSns(orderSns)) {
