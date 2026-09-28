@@ -223,3 +223,9 @@ The cross-runtime credential refactor is split deliberately. `@ecomkit/marketpla
 ## Stage 14C.4B.1A.2 lifecycle contracts
 
 The server-only package now defines provider-neutral connection repository, credential crypto, distributed-lock, and clock contracts, plus Shopee credential/refresh and trusted-access DTOs. It also defines safe lifecycle domain errors with bounded codes, retryability, optional request ID, and explicit safe serialization. Production lifecycle behavior remains API-owned until 14C.4B.1A.3; no Prisma, Redis, HTTP, API, or Worker adapter has moved.
+
+## Stage 14C.4B.1A.3a inactive lifecycle core
+
+`@ecomkit/marketplace-server` now contains `ShopeeCredentialLifecycle`, a server-only, dependency-injected implementation of the Stage 14C.3B lifecycle. It validates connection state and encrypted credential identity, applies the configured refresh skew, takes the provider-neutral `shopee-refresh-lock-<connectionId>` lock, reloads after acquisition, validates refresh responses, rotates both tokens atomically through its repository contract, and marks expired refresh credentials as `REAUTH_REQUIRED`. Its focused fake-dependency parity tests cover valid reuse, rotation, post-lock reload, bounded lock contention, transient and persistence failure, malformed responses, connection-state validation, and safe errors.
+
+This is a controlled migration step only: the core is intentionally unconnected to API or Worker runtime. The existing API `ShopeeTokenService` remains the sole active implementation until Stage 14C.4B.1A.3b. Temporary duplicate source logic therefore exists, but duplicate active runtime lifecycle logic does not. No Prisma, Redis, HTTP, Docker, adapter, queue, or order flow changed in this substage.

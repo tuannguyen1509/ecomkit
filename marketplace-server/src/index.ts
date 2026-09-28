@@ -1,3 +1,4 @@
-/** Server-only marketplace domain workspace. Lifecycle code is introduced in Stage 14C.4B.1A.2. */
+/** Server-only marketplace domain workspace. It is intentionally not exported to Web. */
 export const MARKETPLACE_SERVER_WORKSPACE = "@ecomkit/marketplace-server" as const;
 export * from "./lifecycle-contracts.js";
+export * from "./shopee-credential-lifecycle.js";
