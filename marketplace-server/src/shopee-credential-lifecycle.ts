@@ -54,10 +54,13 @@ export class ShopeeCredentialLifecycle {
 
     if (lock.kind === "unavailable") throw new MarketplaceLifecycleError("SHOPEE_REFRESH_LOCK_UNAVAILABLE", true);
     if (lock.kind === "busy") {
-      // A bounded reload gives a just-finished concurrent refresher a chance to win,
-      // without embedding timers or Redis-specific polling in this domain core.
-      const reloaded = await this.load(connectionId);
-      if (this.isAccessTokenValid(reloaded.credential)) return this.toAccessCredential(reloaded);
+      // Preserve the previous API lifecycle's bounded 10 x 50ms contention wait.
+      // The core polls only its repository; it contains no Redis-specific behavior.
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 50));
+        const reloaded = await this.load(connectionId);
+        if (this.isAccessTokenValid(reloaded.credential)) return this.toAccessCredential(reloaded);
+      }
       throw new MarketplaceLifecycleError("SHOPEE_REFRESH_LOCK_BUSY", true);
     }
 
