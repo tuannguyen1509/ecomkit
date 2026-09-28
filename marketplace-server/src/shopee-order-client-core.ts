@@ -17,6 +17,12 @@ export class ShopeeOrderClientError extends Error {
   toJSON() { return { name: this.name, code: this.code, retryable: this.retryable, ...(this.requestId ? { requestId: this.requestId } : {}) }; }
 }
 
+export function classifyShopeeOrderProviderError(externalCode: string | undefined): Readonly<{ code: string; retryable: boolean }> {
+  if (externalCode === "common.error_auth") return { code: "SHOPEE_ORDER_PROVIDER_AUTH", retryable: false };
+  if (externalCode === "error_server" || externalCode === "error_network") return { code: "SHOPEE_ORDER_PROVIDER_TRANSIENT", retryable: true };
+  return { code: "SHOPEE_ORDER_PROVIDER_INVALID_RESPONSE", retryable: false };
+}
+
 const maxWindow = 15 * 86400;
 
 function validateListInput(input: ShopeeOrderListInput): number {

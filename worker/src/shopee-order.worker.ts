@@ -1,27 +1,29 @@
 import {
-  type ShopeeAccessCredentialProvider,
   classifyShopeeOrderProviderError,
+  type ShopeeAccessCredentialProvider,
+  ShopeeCredentialLifecycle,
+  ShopeeOrderClientCore,
   ShopeeOrderClientError,
   type ShopeeOrderDetailOptions,
   type ShopeeOrderTransport,
 } from "@ecomkit/marketplace-server";
 import { loadShopeeRuntimeConfig, ShopeeHttpClient, ShopeeHttpError } from "@ecomkit/shared";
 import type { ShopeeResponse } from "@ecomkit/shared";
-import { ShopeeTokenService } from "./shopee-token.service.js";
+import { createWorkerShopeeCredentialLifecycle, type WorkerRedisDistributedLockProvider } from "./shopee-lifecycle.worker.js";
 
 type ShopeeOrderListResponse = { more?: boolean; next_cursor?: string; order_list?: Array<Record<string, unknown>> };
 type ShopeeOrderDetailResponse = { order_list?: Array<Record<string, unknown>> };
-export type ApiShopeeOrderShopClient = {
+export type WorkerShopeeOrderShopClient = {
   requestShop<T>(input: { operation: string; apiPath: string; method: "GET"; accessToken: string; shopId: string; query: Record<string, string | number | boolean | undefined> }): Promise<ShopeeResponse<T>>;
 };
 
-export class ApiShopeeAccessCredentialProvider implements ShopeeAccessCredentialProvider {
-  constructor(private readonly tokens: ShopeeTokenService) {}
-  ensureValidAccessToken(connectionId: string) { return this.tokens.ensureValidAccessToken(connectionId); }
+export class WorkerShopeeAccessCredentialProvider implements ShopeeAccessCredentialProvider {
+  constructor(private readonly lifecycle: ShopeeCredentialLifecycle) {}
+  ensureValidAccessToken(connectionId: string) { return this.lifecycle.ensureValidAccessToken(connectionId); }
 }
 
-export class ApiShopeeOrderTransport implements ShopeeOrderTransport {
-  constructor(private readonly clientFactory: () => ApiShopeeOrderShopClient = () => new ShopeeHttpClient(loadShopeeRuntimeConfig())) {}
+export class WorkerShopeeOrderTransport implements ShopeeOrderTransport {
+  constructor(private readonly clientFactory: () => WorkerShopeeOrderShopClient = () => new ShopeeHttpClient(loadShopeeRuntimeConfig())) {}
 
   async list(credential: Awaited<ReturnType<ShopeeAccessCredentialProvider["ensureValidAccessToken"]>>, input: Parameters<ShopeeOrderTransport["list"]>[1]) {
     try {
@@ -50,10 +52,15 @@ export class ApiShopeeOrderTransport implements ShopeeOrderTransport {
     const classification = classifyShopeeOrderProviderError(result.error);
     throw new ShopeeOrderClientError(classification.code, classification.retryable, result.request_id);
   }
-
   private toDomainError(error: unknown): ShopeeOrderClientError {
     if (error instanceof ShopeeOrderClientError) return error;
     if (error instanceof ShopeeHttpError) return new ShopeeOrderClientError("SHOPEE_ORDER_PROVIDER_TRANSIENT", error.safe.retryableHint, error.safe.requestId);
     return new ShopeeOrderClientError("SHOPEE_ORDER_PROVIDER_TRANSIENT", true);
   }
+}
+
+export function createWorkerShopeeOrderClient(input: Readonly<{ lifecycle?: ShopeeCredentialLifecycle; clientFactory?: () => WorkerShopeeOrderShopClient }> = {}): { client: ShopeeOrderClientCore; lifecycle: ShopeeCredentialLifecycle; locks?: WorkerRedisDistributedLockProvider } {
+  const owned = input.lifecycle ? undefined : createWorkerShopeeCredentialLifecycle();
+  const lifecycle = input.lifecycle ?? owned!.lifecycle;
+  return { client: new ShopeeOrderClientCore(new WorkerShopeeAccessCredentialProvider(lifecycle), new WorkerShopeeOrderTransport(input.clientFactory)), lifecycle, ...(owned ? { locks: owned.locks } : {}) };
 }

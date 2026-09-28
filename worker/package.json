@@ -10,6 +10,7 @@
     "test:internal-auth": "tsx --tsconfig tsconfig.json src/worker-config.test.ts",
     "test:marketplace-sync": "tsx --tsconfig tsconfig.json src/marketplace-sync.integration-test.ts",
     "test:shopee-lifecycle": "tsx --tsconfig tsconfig.json src/shopee-lifecycle.integration-test.ts",
+    "test:shopee-order-client": "tsx --tsconfig tsconfig.json src/shopee-order.worker.test.ts",
     "test": "node -e \"console.log('worker foundation test passed')\""
   },
   "dependencies": {

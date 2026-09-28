@@ -267,3 +267,7 @@ Before API cutover, the active API client contract was inventoried. All direct c
 ## Stage 14C.4B.2A.2a.2 API order-client cutover
 
 The API `ShopeeOrderClient` is now a thin Nest facade over `ShopeeOrderClientCore`. An API trusted-access adapter delegates only to the existing `ShopeeTokenService`/shared credential lifecycle, while the API transport adapter delegates only to the existing signed `ShopeeHttpClient`. The facade retains the three API contracts (`listOrders`, `listAllInWindow`, and `getOrderDetails`) and maps safe domain errors to Nest errors. It has no list pagination, window, batching, cursor, or provider-request orchestration. Worker OrderClient wiring, a Shopee adapter, normalization, and production registry registration remain deferred.
+
+## Stage 14C.4B.2A.2b Worker order-client wiring
+
+Worker now has a lazy `createWorkerShopeeOrderClient` factory. It wires the same `ShopeeOrderClientCore` to a Worker access-credential provider backed by `ShopeeCredentialLifecycle` and a Worker transport backed by the existing signed `ShopeeHttpClient`. It imports neither API source nor uses API HTTP. Focused synthetic parity tests cover page metadata and opaque cursors, pagination/window collection, sequential detail batching and response identity, plus provider auth/transient classification. Generic `marketplace-sync` remains credential-free, and no Shopee adapter, normalizer, registry entry, order request, or persistence path is active yet.
