@@ -241,3 +241,9 @@ The AES-256-GCM envelope and Shopee credential payload stay unchanged, so OAuth-
 The generic `MarketplaceAdapter` execution boundary now receives `MarketplaceAdapterContext` containing only `connectionId`, `platform`, `externalShopId`, and `syncRunId`. It contains no credential envelope, access token, refresh token, or provider secret. The generic `marketplace-sync` Worker builds this identity context and no longer decrypts `MarketplaceConnection.credentialEnvelope` or performs provider credential validation before invoking an adapter. Provider-specific adapters will own their credential resolution in a later stage.
 
 The mock adapter accepts the same provider-neutral context and preserves the existing success, replay, update, empty, retry, and restart behavior. Shopee lifecycle wiring in Worker remains deliberately deferred to Stage 14C.4B.1B.2; no Shopee adapter or provider request is registered here.
+
+## Stage 14C.4B.1B.2 Worker lifecycle wiring
+
+Worker now has Prisma repository, shared AES-256-GCM credential crypto, ownership-safe Redis lock, and Shopee HTTP refresh-client adapters for the same server-only `ShopeeCredentialLifecycle` used by API. Its lock namespace is exactly `shopee-refresh-lock-<connectionId>` and it has no API HTTP dependency. Config and Shopee HTTP construction remain lazy, so generic Worker startup does not require Shopee credentials.
+
+Focused Worker integration tests use synthetic credentials and fake refresh transport to verify envelope compatibility, rotation, expired refresh reauthorization, isolated Redis-unavailable handling, and API-style/Worker-style concurrent refresh against the same PostgreSQL and Redis. Exactly one fake provider refresh occurs and both callers receive the rotated access token. Generic `marketplace-sync` remains credential-free; a Shopee adapter and order calls remain deferred to Stage 14C.4B.2.
