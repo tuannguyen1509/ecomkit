@@ -45,6 +45,9 @@ async function run(): Promise<void> {
     assert.equal(completed.status, MarketplaceSyncStatus.SUCCESS); assert.equal(completed.ordersCreated, 2); assert.ok(completed.batchId);
     assert.equal(await prisma.marketplaceExternalOrder.count({ where: { connectionId: successful.id } }), 2);
     assert.equal(await prisma.order.count({ where: { batchId: completed.batchId! } }), 2);
+    const stored = await prisma.marketplaceExternalOrder.findUniqueOrThrow({ where: { connectionId_marketplaceOrderId: { connectionId: successful.id, marketplaceOrderId: "TEST-MKT-001" } } });
+    assert.deepEqual(stored.rawData, { mockProviderOrderId: "TEST-MKT-001", providerPayloadVersion: "v2", updatedAt: "2026-01-02T00:00:00.000Z" });
+    assert.notDeepEqual(stored.rawData, stored.normalizedData); assert.equal((await prisma.marketplaceConnection.findUniqueOrThrow({ where: { id: successful.id } })).syncCursor, "complete:mock-success");
 
     const replay = await createRun(successful.id, "mock-replay"); await enqueue(replay); const replayDone = await terminal(replay.id);
     assert.equal(replayDone.ordersCreated, 0); assert.equal(replayDone.ordersUpdated, 0); assert.equal(replayDone.batchId, null); assert.equal(await prisma.marketplaceExternalOrder.count({ where: { connectionId: successful.id } }), 2);
@@ -62,7 +65,7 @@ async function run(): Promise<void> {
     assert.equal(malformedDone.status, MarketplaceSyncStatus.ERROR); assert.equal(malformedDone.batchId, null); assert.equal(malformedDone.errors.length, 1); assert.equal((await malformedJob.getState()), "failed");
 
     const partial = await connection("mock-partial"); const partialRun = await createRun(partial.id, "mock-partial"); await enqueue(partialRun); const partialDone = await terminal(partialRun.id);
-    assert.equal(partialDone.status, MarketplaceSyncStatus.ERROR); assert.equal(partialDone.batchId, null); assert.equal(await prisma.marketplaceExternalOrder.count({ where: { connectionId: partial.id } }), 1);
+    assert.equal(partialDone.status, MarketplaceSyncStatus.ERROR); assert.equal(partialDone.batchId, null); assert.equal(await prisma.marketplaceExternalOrder.count({ where: { connectionId: partial.id } }), 0); assert.equal((await prisma.marketplaceConnection.findUniqueOrThrow({ where: { id: partial.id } })).syncCursor, "mock-partial");
 
     const first = await connection("mock-success-2"); const second = await connection("mock-empty"); const firstRun = await createRun(first.id, "mock-success-2"); const secondRun = await createRun(second.id, "mock-empty"); await Promise.all([enqueue(firstRun), enqueue(secondRun)]); const [firstDone, secondDone] = await Promise.all([terminal(firstRun.id), terminal(secondRun.id)]);
     assert.equal(firstDone.status, MarketplaceSyncStatus.SUCCESS); assert.equal(secondDone.status, MarketplaceSyncStatus.SUCCESS); assert.equal(secondDone.batchId, null);

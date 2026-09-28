@@ -26,8 +26,7 @@ const mockAdapter: MarketplaceAdapter = {
   async exchangeAuthorizationCode() { return { connection: { externalShopId: "synthetic-shop" } }; },
   async refreshAccessToken() {},
   async validateConnection() { return { externalShopId: "synthetic-shop" }; },
-  async listOrders() { return { orders: [] }; },
-  async getOrderDetail() { return {}; }
+  async syncOrders() { return { orders: [] }; }
 };
 
 async function run(): Promise<void> {

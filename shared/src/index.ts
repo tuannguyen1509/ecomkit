@@ -21,8 +21,9 @@ export type {
   MarketplaceAdapterAuthorizationInput,
   MarketplaceAdapterAuthorizationResult,
   MarketplaceAdapterConnectionIdentity,
-  MarketplaceAdapterOrderListInput,
-  MarketplaceAdapterOrderPage,
+  MarketplaceAdapterOrder,
+  MarketplaceAdapterSyncInput,
+  MarketplaceAdapterSyncResult,
   MarketplaceSupportedPlatform,
   NormalizedMarketplaceOrder,
   NormalizedMarketplaceOrderItem
