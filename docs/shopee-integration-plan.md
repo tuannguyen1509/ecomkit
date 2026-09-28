@@ -251,3 +251,15 @@ Focused Worker integration tests use synthetic credentials and fake refresh tran
 ## Stage 14C.4B.2A.1 shared order-client core
 
 `ShopeeOrderClientCore` now lives in `@ecomkit/marketplace-server`. It uses injected trusted access-credential and order-transport boundaries, with no Nest, API, Worker, direct fetch, signing, or Partner Key dependency. It validates and splits <=15-day windows, keeps cursors opaque, detects invalid/repeated pagination, deduplicates exact `order_sn` values, batches details sequentially in groups of 50, and rejects missing, duplicate, or unexpected detail identity. API and Worker runtimes remain intentionally unchanged until Stage 14C.4B.2A.2; temporary duplicate source logic is controlled, with only the API client active.
+
+## Stage 14C.4B.2A.2a.1 order-client contract parity
+
+Before API cutover, the active API client contract was inventoried. All direct call sites are the API client’s focused contract tests; its public methods are `listOrders`, `listAllInWindow`, and `getOrderDetails`.
+
+| Active API method | Shared-core equivalent | Status |
+| --- | --- | --- |
+| `listOrders` | `ShopeeOrderClientCore.listOrders` | Complete: exactly one provider request, opaque cursor input/output, page metadata, 15-day and page-size validation. |
+| `listAllInWindow` | `ShopeeOrderClientCore.listAllInWindow` | Complete: reuses the single-page primitive and rejects missing/repeated continuation cursors. |
+| `getOrderDetails` | `ShopeeOrderClientCore.getOrderDetails` | Complete: sequential max-50 batching, provider response ordering, duplicate rejection, and explicit `missingOrderSns`. |
+
+`collectOrderSns` remains the stricter collection helper for future adapter orchestration: it splits longer history ranges, follows pages, validates canonical non-empty `order_sn`, and deduplicates exact identifiers. `getCompleteOrderDetails` remains the strict helper for future adapters that require no partial result or unrelated identity. The shared core is still unconnected to API and Worker runtime; Stage 14C.4B.2A.2a.2 will only wire the API facade to these equivalent shared operations.
