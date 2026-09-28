@@ -6,6 +6,12 @@ import { getMarketplaceSyncJobId } from "@ecomkit/shared";
 export const MARKETPLACE_SYNC_QUEUE_NAME = process.env.MARKETPLACE_SYNC_QUEUE_NAME ?? "marketplace-sync";
 const connection = { host: process.env.REDIS_HOST ?? "redis", port: Number(process.env.REDIS_PORT ?? "6379") };
 const activeStatuses: MarketplaceSyncStatus[] = [MarketplaceSyncStatus.PENDING, MarketplaceSyncStatus.QUEUED, MarketplaceSyncStatus.PROCESSING];
+const queueOperationTimeoutMs = Number(process.env.QUEUE_OPERATION_TIMEOUT_MS ?? "5000");
+
+const withQueueTimeout = async <T>(operation: Promise<T>): Promise<T> => Promise.race([
+  operation,
+  new Promise<T>((_, reject) => setTimeout(() => reject(new Error("MARKETPLACE_QUEUE_OPERATION_TIMEOUT")), queueOperationTimeoutMs))
+]);
 
 export type MarketplaceSyncRequest = { connectionId: string; triggeredByUserId?: string; triggerType?: MarketplaceSyncTrigger; syncType?: MarketplaceSyncType };
 export type MarketplaceSyncJobPayload = { connectionId: string; syncRunId: string };
@@ -36,13 +42,13 @@ export class MarketplaceSyncQueueService implements OnModuleDestroy {
 
     const jobId = getMarketplaceSyncJobId(run.id);
     try {
-      await this.queue.add("sync-marketplace", { connectionId: input.connectionId, syncRunId: run.id }, {
+      await withQueueTimeout(this.queue.add("sync-marketplace", { connectionId: input.connectionId, syncRunId: run.id }, {
         jobId,
         attempts: 2,
         backoff: { type: "exponential", delay: 1000 },
         removeOnComplete: { count: 100 },
         removeOnFail: { count: 500 }
-      });
+      }));
       await prisma.marketplaceSyncRun.update({ where: { id: run.id }, data: { status: MarketplaceSyncStatus.QUEUED } });
       return { syncRunId: run.id, jobId, status: "QUEUED" };
     } catch (error) {

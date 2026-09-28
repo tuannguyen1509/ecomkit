@@ -102,7 +102,7 @@ Stage 5 dùng `pdfjs-dist` **6.3.289** để đọc PDF theo trang/text items. P
 
 - Node host 25 không phải runtime chuẩn; project pin Node 24.21.0 và Docker image `node:24.21.0-bookworm-slim`.
 - Khi PowerShell chặn `npm.ps1`, dùng `npm.cmd`.
-- `npm audit` hiện có 6 warnings: 4 high trong dependency gián tiếp Prisma CLI (`deepmerge-ts`, `mysql2`) và 2 moderate từ `exceljs` dependency `uuid`. Không dùng `npm audit fix --force`: hiện command đề xuất downgrade breaking Prisma hoặc ExcelJS. Không nâng Prisma lên RC chỉ để giảm audit warning.
+- `npm audit` hiện có 7 warnings: 4 high trong dependency Prisma CLI (`deepmerge-ts`, `mysql2`) và 3 moderate từ dependency `uuid` của `bullmq`/`exceljs`. Không dùng `npm audit fix --force`: hiện command đề xuất downgrade breaking Prisma hoặc ExcelJS. Không nâng Prisma lên RC chỉ để giảm audit warning.
 
 # Dependency / Environment Change Log
 

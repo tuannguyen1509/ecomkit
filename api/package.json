@@ -23,6 +23,8 @@
     "test:admin-users": "tsx src/auth/admin-users.integration-test.ts",
     "test:marketplace-core": "tsx src/marketplace/marketplace-core.integration-test.ts",
     "test:marketplace-sync": "tsx src/marketplace/marketplace-sync.integration-test.ts",
+    "test:marketplace-redis-outage": "tsx src/marketplace/marketplace-redis-outage.integration-test.ts",
+    "test:batch-queue-authenticated": "tsx src/queue/batch-queue-authenticated.integration-test.ts",
     "auth:bootstrap-admin": "tsx src/auth/bootstrap-admin.ts"
   },
   "dependencies": {
