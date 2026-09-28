@@ -8,12 +8,15 @@ COPY web/package.json web/package.json
 COPY api/package.json api/package.json
 COPY worker/package.json worker/package.json
 COPY shared/package.json shared/package.json
+COPY marketplace-server/package.json marketplace-server/package.json
 COPY database/package.json database/package.json
 RUN npm ci
 COPY worker worker
 COPY shared shared
+COPY marketplace-server marketplace-server
 COPY database database
 RUN DATABASE_URL=postgresql://placeholder:placeholder@postgres:5432/ecomkit npm run db:generate --workspace database
 RUN npm run build --workspace database
 RUN npm run build --workspace shared
+RUN npm run build --workspace marketplace-server
 CMD ["npm", "run", "dev", "--workspace", "worker"]

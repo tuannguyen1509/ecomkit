@@ -215,3 +215,7 @@ The new access and refresh tokens are validated and persisted together as one ne
 List windows validate `create_time` or `update_time`, `time_from < time_to`, and the verified maximum of 15 days. A pure splitter produces consecutive no-gap windows for later initial-sync orchestration; incremental callers can use `update_time`. Page size is validated at 1–100 (default 100). Cursor values remain opaque, and the list-all helper rejects missing or repeated next cursors rather than looping indefinitely.
 
 Detail identifiers remain opaque `order_sn` strings. Pure batching preserves caller order and creates sequential batches of at most 50 identifiers. Provider detail results are keyed by `order_sn`, so shuffled results are supported, missing identifiers are surfaced, and duplicate provider details are rejected. Optional/masked fields remain optional/source values. The client does not request PII-specific optional fields by default. Stage 14C.4B will normalize these DTOs and integrate the adapter.
+
+## Stage 14C.4B.1A.1 server-only workspace scaffold
+
+The cross-runtime credential refactor is split deliberately. `@ecomkit/marketplace-server` is a Node/server-only workspace consumed only by API and Worker build graphs; Web does not import it. This substage adds no lifecycle code or runtime behavior. It establishes workspace and Docker build support for the following lifecycle-contract extraction, with Worker runtime wiring explicitly deferred.

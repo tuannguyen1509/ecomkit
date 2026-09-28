@@ -6,6 +6,7 @@
   "workspaces": [
     "database",
     "shared",
+    "marketplace-server",
     "api",
     "worker",
     "web"
@@ -22,6 +23,7 @@
     "build:web": "npm run build --workspace web",
     "build:api": "npm run build --workspace api",
     "build:worker": "npm run build --workspace worker",
+    "build:marketplace-server": "npm run build --workspace marketplace-server",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "db:format": "npm run db:format --workspace database",
