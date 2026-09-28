@@ -26,5 +26,15 @@ export type {
   NormalizedMarketplaceOrder,
   NormalizedMarketplaceOrderItem
 } from "./marketplace-adapter-contract";
+export {
+  getShopeeBaseUrl,
+  hmacSha256Hex,
+  loadShopeeRuntimeConfig,
+  ShopeeConfigError,
+  ShopeeHttpClient,
+  ShopeeHttpError,
+  ShopeeSigner
+} from "./shopee-http-client";
+export type { ShopeeClock, ShopeeEnvironment, ShopeeFetch, ShopeePublicRequest, ShopeeResponse, ShopeeRuntimeConfig, ShopeeShopRequest } from "./shopee-http-client";
 export const getBatchProcessingJobId = (batchId: string): string => `batch-${batchId}`;
 export const getMarketplaceSyncJobId = (syncRunId: string): string => `marketplace-sync-${syncRunId}`;

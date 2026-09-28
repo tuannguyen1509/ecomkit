@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node -e \"console.log('shared foundation test passed')\""
+    "test": "node -e \"console.log('shared foundation test passed')\"",
+    "test:shopee-http": "tsx src/shopee-http-client.test.ts"
   }
 }

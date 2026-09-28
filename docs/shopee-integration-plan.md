@@ -179,3 +179,11 @@ These do not block Stage 14C.2 contract-level signing/HTTP-client work, but they
 ```
 
 Manual user functional testing is not required in Stage 14C.1 because this stage adds no user-facing authorization or synchronization function.
+
+## Stage 14C.2 signing and HTTP-client foundation
+
+Stage 14C.2 adds reusable shared `ShopeeSigner`, runtime config loader, and `ShopeeHttpClient`. They use Node built-in `crypto` and native `fetch`; no provider SDK is installed. `SHOPEE_ENV` selects only `sandbox` or `production` and centralizes the official hosts. The configuration is lazy: absent `SHOPEE_PARTNER_ID`/`SHOPEE_PARTNER_KEY` does not affect current application startup, but constructing provider functionality with missing/invalid configuration fails with a bounded error.
+
+The signer uses the documented public/token and Shop base strings exactly, with Unix seconds injected through a clock for deterministic tests. The HTTP client serializes query values with `URLSearchParams` after signing raw contract components. It applies a configurable `SHOPEE_HTTP_TIMEOUT_MS` (default 30000), uses injected fake fetch in tests, and performs no real Shopee traffic.
+
+Diagnostics retain only operation, API path, HTTP status, request ID, external code, retryability hint, and a safe message. They never retain or log a full URL/query, partner key, access/refresh token, signature, or credential envelope. Stage 14C.2 implements neither OAuth callback/token persistence nor order list/detail business sync, normalization, or production adapter registration.
