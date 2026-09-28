@@ -16,6 +16,7 @@ export type {
 } from "./marketplace-credential-crypto";
 export type {
   MarketplaceAdapter,
+  MarketplaceAdapterContext,
   MarketplaceAdapterAuthorizationCodeInput,
   MarketplaceAdapterAuthorizationInput,
   MarketplaceAdapterAuthorizationResult,

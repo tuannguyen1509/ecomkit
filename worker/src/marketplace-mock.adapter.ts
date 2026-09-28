@@ -1,5 +1,5 @@
 import { Platform } from "@ecomkit/database";
-import type { MarketplaceAdapter, MarketplaceAdapterOrderPage, MarketplaceShopCredential } from "@ecomkit/shared";
+import type { MarketplaceAdapter, MarketplaceAdapterContext, MarketplaceAdapterOrderPage } from "@ecomkit/shared";
 
 export class MarketplaceMockError extends Error {
   constructor(public readonly code: string, public readonly retryable: boolean, public readonly httpStatus?: number) {
@@ -13,15 +13,14 @@ const order = (id: string, updatedAt: string, status = "READY") => ({ marketplac
 
 export class MarketplaceMockAdapter implements MarketplaceAdapter {
   readonly platform = Platform.SHOPEE;
-  readonly requiresCredential = false;
 
   async getAuthorizationUrl() { return { authorizationUrl: "https://example.invalid/mock-marketplace" }; }
-  async exchangeAuthorizationCode() { return { credential: {}, connection: { externalShopId: "mock-shop" } }; }
-  async refreshAccessToken(credential: MarketplaceShopCredential) { return credential; }
+  async exchangeAuthorizationCode() { return { connection: { externalShopId: "mock-shop" } }; }
+  async refreshAccessToken(_context: MarketplaceAdapterContext) {}
   async validateConnection() { return { externalShopId: "mock-shop" }; }
-  async getOrderDetail(_credential: MarketplaceShopCredential | undefined, marketplaceOrderId: string) { return { marketplaceOrderId }; }
+  async getOrderDetail(_context: MarketplaceAdapterContext, marketplaceOrderId: string) { return { marketplaceOrderId }; }
 
-  async listOrders(_credential: MarketplaceShopCredential | undefined, input: { cursor?: string | null }): Promise<MarketplaceAdapterOrderPage> {
+  async listOrders(_context: MarketplaceAdapterContext, input: { cursor?: string | null }): Promise<MarketplaceAdapterOrderPage> {
     const scenario = String(input.cursor ?? "mock-success");
     if (!scenario.startsWith("mock-")) throw new MarketplaceMockError("MOCK_CONNECTION_REQUIRED", false, 400);
     if (scenario.startsWith("mock-empty")) return { orders: [], nextCursor: null };

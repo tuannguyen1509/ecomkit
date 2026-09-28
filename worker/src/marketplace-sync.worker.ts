@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import { UnrecoverableError, Worker } from "bullmq";
 import { MarketplaceConnectionStatus, MarketplaceSyncStatus, Platform, prisma } from "@ecomkit/database";
 import type { Prisma } from "@ecomkit/database";
-import { decryptMarketplaceCredential, getMarketplaceSyncJobId } from "@ecomkit/shared";
-import type { MarketplaceAdapter, NormalizedMarketplaceOrder } from "@ecomkit/shared";
+import { getMarketplaceSyncJobId } from "@ecomkit/shared";
+import type { MarketplaceAdapter, MarketplaceAdapterContext, NormalizedMarketplaceOrder } from "@ecomkit/shared";
 import { MarketplaceMockAdapter, MarketplaceMockError } from "./marketplace-mock.adapter.js";
 
 export const MARKETPLACE_SYNC_QUEUE_NAME = process.env.MARKETPLACE_SYNC_QUEUE_NAME ?? "marketplace-sync";
@@ -82,11 +82,7 @@ export function startMarketplaceSyncWorker(options?: { queueName?: string; concu
       if (run.connection.status !== MarketplaceConnectionStatus.ACTIVE) throw new MarketplaceSyncExecutionError("MARKETPLACE_CONNECTION_NOT_ACTIVE", false, "SYNC_ORDERS", 409, "Activate or reconnect the marketplace connection before syncing.");
       const adapter = adapters.get(run.connection.platform);
       if (!adapter) throw new MarketplaceSyncExecutionError("MARKETPLACE_ADAPTER_NOT_REGISTERED", false, "LIST_ORDERS", 501);
-      let credential;
-      if (adapter.requiresCredential) {
-        if (!run.connection.credentialEnvelope) throw new MarketplaceSyncExecutionError("MARKETPLACE_CONNECTION_CREDENTIAL_MISSING", false, "LIST_ORDERS", 409);
-        credential = decryptMarketplaceCredential(run.connection.credentialEnvelope, process.env.MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY);
-      }
+      const context: MarketplaceAdapterContext = { connectionId: run.connectionId, platform: run.connection.platform as MarketplaceAdapterContext["platform"], externalShopId: run.connection.externalShopId, syncRunId: run.id };
       await prisma.$transaction(async (tx) => {
         await tx.marketplaceSyncRun.update({ where: { id: run.id }, data: { status: MarketplaceSyncStatus.PROCESSING, startedAt: run.startedAt ?? new Date() } });
         await tx.marketplaceConnection.update({ where: { id: run.connectionId }, data: { lastAttemptedSyncAt: new Date() } });
@@ -97,7 +93,7 @@ export function startMarketplaceSyncWorker(options?: { queueName?: string; concu
       let created = 0, updated = 0, normalized = 0, fetched = 0;
       do {
         let page;
-        try { page = await adapter.listOrders(credential, { cursor: cursor ?? startCursor, windowStart: run.windowStart ?? undefined, windowEnd: run.windowEnd ?? undefined }); }
+        try { page = await adapter.listOrders(context, { cursor: cursor ?? startCursor, windowStart: run.windowStart ?? undefined, windowEnd: run.windowEnd ?? undefined }); }
         catch (error) { if (error instanceof MarketplaceMockError) throw new MarketplaceSyncExecutionError(error.code, error.retryable, "LIST_ORDERS", error.httpStatus, error.retryable ? "The system will retry automatically." : "Review the marketplace source scenario."); throw error; }
         fetched += page.orders.length;
         for (const order of page.orders) { const result = await upsertOrder(run.connectionId, order); if (result === "created") created++; if (result === "updated") updated++; normalized++; allOrders.push(order); }

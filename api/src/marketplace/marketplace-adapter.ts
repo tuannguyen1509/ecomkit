@@ -1,5 +1,6 @@
 export type {
   MarketplaceAdapter,
+  MarketplaceAdapterContext,
   MarketplaceAdapterAuthorizationCodeInput,
   MarketplaceAdapterAuthorizationInput,
   MarketplaceAdapterAuthorizationResult,
