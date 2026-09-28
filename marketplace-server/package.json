@@ -8,6 +8,6 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx src/lifecycle-contracts.test.ts && tsx src/shopee-credential-lifecycle.test.ts"
+    "test": "tsx src/lifecycle-contracts.test.ts && tsx src/shopee-credential-lifecycle.test.ts && tsx src/shopee-order-client-core.test.ts"
   }
 }
