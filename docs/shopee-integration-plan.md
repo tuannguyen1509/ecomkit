@@ -1,0 +1,181 @@
+# Shopee integration plan (Stage 14C.1)
+
+Verification date: 2026-09-28 (Asia/Bangkok).
+
+## Scope and authority
+
+This is an official-document verification and plan only. No Shopee API request, credential, OAuth callback, provider SDK, Prisma/API/Worker/Web change, or package change was made.
+
+Provider facts in this document are verified from the official Shopee Open Platform PDF exports supplied by the project owner: **Authorization & Authentication**, **`v2.order.get_order_list`**, and **`v2.order.get_order_detail`**. No third-party source is used as authority. Stage 6B Golden remains **PENDING** because approved production Excel is unavailable.
+
+## Verified authorization and redirect flow
+
+Shopee seller authorization is valid for up to **365 days**; a seller may select a shorter authorization expiry.
+
+| Environment | Authorization URL |
+| --- | --- |
+| Production | `https://open.shopee.com/auth` |
+| Sandbox | `https://open.sandbox.test-stable.shopee.com/auth` |
+
+Required authorization parameters are `partner_id`, `auth_type=seller`, `redirect_uri`, and `response_type=code`. `state` is optional and officially supported: Shopee returns it unchanged after authorization.
+
+**Shopee-native state support: YES.** Ecomkit must still generate a cryptographically random, single-use, short-lived state, store pending context in Redis, bind it to the initiating ADMIN/session where possible, and validate it before code exchange.
+
+Test/Live Redirect URL Domain configuration is required in the Shopee Console where validation applies. The `redirect_uri` domain must match that configured domain. Ecomkit production therefore needs a stable HTTPS callback domain; no company domain is hard-coded here.
+
+Shop authorization callback fields are `code` and `shop_id`. Main-account authorization may return `code` and `main_account_id`, but Phase 1 is shop-level only. The authorization code is single-use and expires after **10 minutes**.
+
+## App credentials and environments
+
+The verified identifier is `partner_id`; the signing secret is `partner_key`. `partner_key` is secret material. It must be supplied only from local untracked runtime configuration or a production secret manager, never DB plaintext, Git, queue data, logs, Web code, or documentation values.
+
+The official exports identify separate Production and Sandbox hosts. Test/Live App creation, approval/category, exact credential separation, and available test shops still require **Developer Console confirmation**. Proposed future placeholders, subject to that confirmation:
+
+```text
+SHOPEE_PARTNER_ID=
+SHOPEE_PARTNER_KEY=
+MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY=
+```
+
+No placeholder was added to `.env.example` in this stage.
+
+## Signing
+
+Verified algorithm: **HMAC-SHA256** using `partner_key`, encoded as a lowercase hexadecimal digest.
+
+For Shop APIs, the base string is the concatenation, in this exact order:
+
+```text
+partner_id + api_path + timestamp + access_token + shop_id
+```
+
+For Public APIs, the verified base string is:
+
+```text
+partner_id + api_path + timestamp
+```
+
+Token endpoints must follow their official documented public/common signing rules. The timestamp validity window is **5 minutes**. The supplied documents do not state a distinct GET-versus-POST signature formula; the signed API path and principal type determine the base string.
+
+## Access-token exchange and refresh
+
+| Operation | Production endpoint | Sandbox endpoint |
+| --- | --- | --- |
+| Get access token | `POST https://partner.shopeemobile.com/api/v2/auth/token/get` | `POST https://openplatform.sandbox.test-stable.shopee.sg/api/v2/auth/token/get` |
+| Refresh access token | `POST https://partner.shopeemobile.com/api/v2/auth/access_token/get` | Requires confirmation from the supplied authorization export before implementation. |
+
+Common token endpoint parameters are `partner_id`, `timestamp`, and `sign`. A shop-level token-exchange body contains `code`, `partner_id`, and `shop_id`.
+
+Verified lifetimes and replacement semantics:
+
+- `access_token`: **4 hours**; reusable while valid.
+- After a new access token is generated, the previous access token remains valid for approximately **5 minutes**.
+- `refresh_token`: **30 days**, single-use per `shop_id`/`merchant_id`.
+- Refresh returns a new access token and a new refresh token; the new refresh token is required for the next refresh.
+
+This confirms the existing Ecomkit design: replace the entire encrypted credential envelope atomically. A refresh failure caused by expiration/authorization invalidation must lead to `REAUTH_REQUIRED`, rather than blind retrying. The exact official refresh request body and sandbox refresh host remain a small verification item for Stage 14C.3.
+
+## Order list
+
+| Item | Verified value |
+| --- | --- |
+| Endpoint | `GET /api/v2/order/get_order_list` |
+| Production host | `https://partner.shopeemobile.com/api/v2/order/get_order_list` |
+| Sandbox host | `https://openplatform.sandbox.test-stable.shopee.sg/api/v2/order/get_order_list` |
+| Shop authentication | `partner_id`, `timestamp`, `access_token`, `shop_id`, `sign` |
+| Time range field | `create_time` or `update_time` |
+| Required range | `time_from`, `time_to` |
+| Maximum range | `time_to - time_from <= 15 days` |
+| Page size | `1..100` |
+| Pagination | optional `cursor`; response `more`, `next_cursor` |
+
+If `more=true`, the next request uses the prior `next_cursor`. Supported selectable status values include `UNPAID`, `READY_TO_SHIP`, `PROCESSED`, `SHIPPED`, `COMPLETED`, `IN_CANCEL`, `CANCELLED`, and `INVOICE_PENDING`. Phase 1 must not restrict retrieval to only shipment-ready orders without a later business decision.
+
+Recommended strategy:
+
+- **Initial:** retrieve sequential bounded windows of at most 15 days for an approved larger history range.
+- **Incremental:** use `time_range_field=update_time`, committed checkpoint, cursor pagination, and a bounded overlap. The overlap duration is intentionally not selected until production observation.
+
+`MarketplaceSyncRun.startCursor`, `MarketplaceSyncRun.resultCursor`, and `MarketplaceConnection.syncCursor` support this model without schema changes.
+
+## Order detail and normalization
+
+Verified detail endpoint: `GET /api/v2/order/get_order_detail`. It accepts `order_sn_list`, with **1–50 `order_sn` values per request**. Future detail calls must batch at most 50 identifiers.
+
+Verified detail concepts include `order_sn`, `region`, `currency`, `cod`, `total_amount`, `order_status`, `create_time`, `update_time`, `item_list`, `recipient_address`, `payment_method`, and `shipping_carrier`.
+
+Item concepts include `item_id`, `item_name`, `item_sku`, `model_id`, `model_name`, `model_sku`, `model_quantity_purchased`, `model_original_price`, and `model_discounted_price`. Provider fields are optional/source-dependent; missing or masked values remain `NULL` and Ecomkit must not infer buyer data, SKU, prices, or financial output values.
+
+Shopee reports `order_sn` as its unique order identifier. Its canonical Ecomkit mapping is:
+
+```text
+order_sn -> marketplaceOrderId -> rawOrderCode -> Mã đơn sàn
+```
+
+No identifier transformation, case folding, or fuzzy matching is allowed. `item_list` maps conceptually to `NormalizedMarketplaceOrderItem[]`; `order_status` to `rawProviderStatus`; `create_time` to `providerCreatedAt`; and `update_time` to `providerUpdatedAt`.
+
+Buyer/recipient information may be masked by market, seller, or channel. Ecomkit avoids collecting unnecessary PII and preserves only returned source values when a later approved mapping requires them.
+
+## Errors, retries, permissions, and rate limits
+
+Verified order-response concepts are `request_id`, `error`, and `message`. Verified error classes/examples include `error_not_found`, `error_param`, `error_permission`, `error_server`, `error_network`, `error_data`, `error_shop`, `order.order_list_invalid_time`, and `common.error_auth`.
+
+Future safe mapping:
+
+```text
+error       -> MarketplaceSyncError.externalCode
+message     -> MarketplaceSyncError.message
+request_id  -> MarketplaceSyncError.safeContext.requestId
+```
+
+Never store an authorization header, token, `partner_key`, signature, or signed URL in error context.
+
+Planned classification, not runtime behavior: `error_server` and `error_network` are likely retryable; `error_param`, `error_permission`, `error_shop`, and `order.order_list_invalid_time` are non-retryable until corrected; `common.error_auth` requires token/reauthorization handling rather than blind retries.
+
+Exact rate-limit quota and `Retry-After` semantics are **NOT VERIFIED** in the supplied exports. Generic Ecomkit throttling/backoff remains configurable; real tuning belongs to test-shop/production rollout validation.
+
+The intended scope is **read order data only**. Product write, inventory write, price write, and order modification are all **NO**. Exact Shopee Console permission/scopes remain to be confirmed before authorization.
+
+## `shop_id`, Vietnam, and Console items
+
+`shop_id` is the verified shop-level principal used in seller authorization, token exchange, Shop API authentication, and refresh-token single-use scope. For Phase 1, `externalShopId = shop_id`. `main_account_id` is returned in a distinct main-account authorization flow and is deferred.
+
+The supplied exports provide the Production and Sandbox hosts above, but do not independently verify Vietnam-specific enrollment, regional restrictions, or cross-border behavior. The intended marketplace is Shopee Vietnam; this operational applicability requires Developer Console confirmation before real authorization/E2E.
+
+Still requiring Developer Console confirmation:
+
+- App creation/type/category and approval requirements.
+- Test/sandbox availability, authorized test shop, and Test-versus-Live credentials.
+- Actual Partner credentials and callback-domain registration.
+- Exact read-order scopes/permissions.
+- Vietnam/local/cross-border applicability and exact rate quota.
+
+These do not block Stage 14C.2 contract-level signing/HTTP-client work, but they block real OAuth and sandbox/test-shop E2E.
+
+## Ecomkit compatibility
+
+| Foundation component | Result |
+| --- | --- |
+| `MarketplaceConnection` | Compatible: `platform=SHOPEE`, `externalShopId=shop_id`, encrypted shop credentials. |
+| `credentialEnvelope` | Compatible: atomic access token, rotating refresh token, expiry metadata, and shop ID payload. |
+| `MarketplaceAdapter` / Registry | Compatible with signed auth, exchange, refresh, list, detail, normalization, and safe error mapping. |
+| `MarketplaceSyncRun` | Compatible with <=15-day windows and cursor audit. |
+| `MarketplaceExternalOrder` | Compatible with unique `order_sn` source identity and provider timestamps. |
+| `MarketplaceSyncError` | Compatible with error/message/request ID and retryability without secret leakage. |
+| `marketplace-sync` | Compatible with same-run retry, checkpoint-on-success, and configurable throttling. |
+
+**Schema changes required: NO.**
+**Generic architecture changes required: NO.**
+
+## Next implementation stages
+
+```text
+14C.1  Official API verification + plan
+14C.2  Shopee Signing + HTTP Client + Contract Tests
+14C.3  Shopee OAuth + Token Lifecycle
+14C.4  Order List + Detail + Normalization
+14C.5  Sandbox/Test-Shop E2E
+14C.6  Shopee regression + closure
+```
+
+Manual user functional testing is not required in Stage 14C.1 because this stage adds no user-facing authorization or synchronization function.
