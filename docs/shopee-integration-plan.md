@@ -219,3 +219,7 @@ Detail identifiers remain opaque `order_sn` strings. Pure batching preserves cal
 ## Stage 14C.4B.1A.1 server-only workspace scaffold
 
 The cross-runtime credential refactor is split deliberately. `@ecomkit/marketplace-server` is a Node/server-only workspace consumed only by API and Worker build graphs; Web does not import it. This substage adds no lifecycle code or runtime behavior. It establishes workspace and Docker build support for the following lifecycle-contract extraction, with Worker runtime wiring explicitly deferred.
+
+## Stage 14C.4B.1A.2 lifecycle contracts
+
+The server-only package now defines provider-neutral connection repository, credential crypto, distributed-lock, and clock contracts, plus Shopee credential/refresh and trusted-access DTOs. It also defines safe lifecycle domain errors with bounded codes, retryability, optional request ID, and explicit safe serialization. Production lifecycle behavior remains API-owned until 14C.4B.1A.3; no Prisma, Redis, HTTP, API, or Worker adapter has moved.
