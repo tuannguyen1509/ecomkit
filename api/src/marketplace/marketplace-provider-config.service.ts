@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
+import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 import { MarketplaceConnectionStatus, Platform, prisma } from "@ecomkit/database";
 import { MarketplaceCredentialCryptoError, getShopeeAuthorizationBaseUrl, getShopeeBaseUrl, ShopeeSigner } from "@ecomkit/shared";
 import { ShopeeAppConfigError, ShopeeAppConfigResolver } from "@ecomkit/marketplace-server";
@@ -11,7 +11,7 @@ export type SafeProviderConfig = { platform: "SHOPEE"; environment: string; part
 
 @Injectable()
 export class MarketplaceProviderConfigService {
-  constructor(private readonly credentials: MarketplaceCredentialService) {}
+  constructor(@Inject(MarketplaceCredentialService) private readonly credentials: MarketplaceCredentialService) {}
   resolver(env: Record<string, string | undefined> = process.env): ShopeeAppConfigResolver {
     return new ShopeeAppConfigResolver({ findShopee: async () => prisma.marketplaceProviderConfig.findUnique({ where: { platform: Platform.SHOPEE }, select: { environment: true, partnerId: true, partnerSecretEnvelope: true, redirectUri: true, isEnabled: true } }) }, { decryptPartnerSecret: (envelope: string) => this.secret(envelope) }, env);
   }
