@@ -44,7 +44,7 @@ export class MarketplaceProviderConfigService {
   async overview() {
     const rows = await prisma.marketplaceConnection.findMany({ where: { platform: Platform.SHOPEE }, orderBy: { updatedAt: "desc" }, select: { id: true, externalShopId: true, shopName: true, status: true, credentialEnvelope: true, lastSuccessfulSyncAt: true, lastAttemptedSyncAt: true, createdAt: true, updatedAt: true, syncRuns: { orderBy: { createdAt: "desc" }, take: 10, select: { id: true, syncType: true, triggerType: true, status: true, errorCount: true, createdAt: true, completedAt: true } } } });
     const connections = rows.map(({ credentialEnvelope, ...row }) => { let metadata: Record<string, unknown> = {}; try { metadata = credentialEnvelope ? this.credentials.decryptCredential(credentialEnvelope).providerMetadata ?? {} : {}; } catch {} return { ...row, accessTokenConfigured: Boolean(credentialEnvelope), accessTokenExpiresAt: typeof metadata.accessTokenExpiresAt === "string" ? metadata.accessTokenExpiresAt : null, credentialSource: metadata.credentialSource === "EXTERNAL_IMPORT" ? "EXTERNAL_IMPORT" : "OAUTH", refreshOwnership: metadata.refreshOwnership === "EXTERNAL" ? "EXTERNAL" : "ECOMKIT", liveApiStatus: typeof metadata.liveApiStatus === "string" ? metadata.liveApiStatus : "NOT_TESTED", lastLiveTestedAt: typeof metadata.lastLiveTestedAt === "string" ? metadata.lastLiveTestedAt : null }; });
-    return { config: await this.getShopee(), connections };
+    return { config: await this.getShopee(), encryptionReady: this.encryptionReady(), connections };
   }
   async importExternalToken(userId: string, input: ImportShopeeExternalTokenDto) {
     await this.resolveRuntime();
