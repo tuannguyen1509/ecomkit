@@ -197,3 +197,5 @@ MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY=
 ```
 
 `SHOPEE_PARTNER_KEY` và `MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY` là secret. Encryption key phải là Base64 của đúng 32 random bytes và phải giống nhau ở API/Worker. Không commit giá trị thật, không ghi log, không gửi ra browser/queue/Redis. Production dùng `SHOPEE_ENV=production` và callback chính xác `https://ecom.vuikhoe.vn/api/marketplaces/shopee/oauth/callback`; production callback phải HTTPS và public. Xem checklist và quy trình đầy đủ tại [shopee-live-test-runbook.md](shopee-live-test-runbook.md).
+
+Sau khi cấu hình `MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY` ở server, ADMIN có thể mở `http://localhost:3000/marketplaces` để lưu Partner ID, Partner Key và redirect URI. Partner Key được mã hóa trước khi lưu; trường secret luôn trống khi sửa và để trống sẽ giữ nguyên secret cũ. Cấu hình database đang bật được ưu tiên; nếu chưa có hoặc đã tắt, hệ thống tiếp tục dùng các biến `SHOPEE_*` để tương thích deployment cũ. Nút **Kiểm tra cấu hình** chỉ kiểm tra local/structural và không gọi Shopee.

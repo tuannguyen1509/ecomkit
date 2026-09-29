@@ -5,3 +5,4 @@ export * from "./shopee-credential-lifecycle.js";
 export * from "./shopee-order-client-core.js";
 export * from "./shopee-normalizer.js";
 export * from "./shopee-sync-checkpoint.js";
+export * from "./shopee-app-config.js";

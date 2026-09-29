@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, OnModuleDestroy, ServiceUnavailableException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, OnModuleDestroy, Optional, ServiceUnavailableException } from "@nestjs/common";
 import { MarketplaceLifecycleError, ShopeeCredentialLifecycle } from "@ecomkit/marketplace-server";
 import { loadShopeeRuntimeConfig, ShopeeHttpClient } from "@ecomkit/shared";
 import { MarketplaceCredentialService } from "./marketplace-credential.service.js";
 import { ApiMarketplaceCredentialCrypto, ApiShopeeTokenRefreshClient, PrismaMarketplaceLifecycleConnectionRepository, RedisDistributedLockProvider, systemClock, type ApiShopeeRefreshClient } from "./shopee-lifecycle.adapters.js";
+import { MarketplaceProviderConfigService } from "./marketplace-provider-config.service.js";
 
 export type ValidShopeeCredential = { accessToken: string; shopId: string; accessTokenExpiresAt: string };
 
@@ -12,8 +13,9 @@ export class ShopeeTokenService implements OnModuleDestroy {
   private lifecycle?: ShopeeCredentialLifecycle;
 
   constructor(
-    private readonly credentials: MarketplaceCredentialService,
-    private readonly clientFactory: () => ApiShopeeRefreshClient = () => new ShopeeHttpClient(loadShopeeRuntimeConfig()),
+    @Inject(MarketplaceCredentialService) private readonly credentials: MarketplaceCredentialService,
+    @Optional() private readonly clientFactory?: () => ApiShopeeRefreshClient,
+    @Optional() @Inject(MarketplaceProviderConfigService) private readonly providerConfigs?: MarketplaceProviderConfigService,
   ) {}
 
   async ensureValidAccessToken(connectionId: string): Promise<ValidShopeeCredential> {
@@ -33,7 +35,7 @@ export class ShopeeTokenService implements OnModuleDestroy {
       new PrismaMarketplaceLifecycleConnectionRepository(),
       new ApiMarketplaceCredentialCrypto(this.credentials),
       this.locks,
-      new ApiShopeeTokenRefreshClient(this.clientFactory),
+      new ApiShopeeTokenRefreshClient(this.clientFactory, this.providerConfigs ? () => this.providerConfigs!.resolveRuntime() : undefined),
       systemClock,
       {
         refreshSkewSeconds: Number(process.env.SHOPEE_ACCESS_TOKEN_REFRESH_SKEW_SECONDS ?? "300"),

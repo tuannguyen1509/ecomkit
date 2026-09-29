@@ -45,7 +45,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const logout = async () => { await apiFetch("/auth/logout", { method: "POST" }); setUser(null); router.replace("/login"); };
   return <UserContext.Provider value={user}><div className={styles.shell}>
     <aside className={styles.sidebar}><Link className={styles.brand} href="/">Ecomkit<br /><span>Vui Khỏe</span></Link>
-      <nav aria-label="Điều hướng chính">{navigation.map(([href, label]) => <Link key={href} className={pathname === href ? styles.active : ""} href={href}>{label}</Link>)}{user.role === "ADMIN" && <Link className={pathname.startsWith("/admin") ? styles.active : ""} href="/admin/users">Quản lý tài khoản</Link>}</nav>
+      <nav aria-label="Điều hướng chính">{navigation.map(([href, label]) => <Link key={href} className={pathname === href ? styles.active : ""} href={href}>{label}</Link>)}{user.role === "ADMIN" && <><Link className={pathname.startsWith("/marketplaces") ? styles.active : ""} href="/marketplaces">Marketplace</Link><Link className={pathname.startsWith("/admin") ? styles.active : ""} href="/admin/users">Quản lý tài khoản</Link></>}</nav>
       <button type="button" onClick={() => void logout()}>Đăng xuất</button>
     </aside>
     <section className={styles.workspace}><header className={styles.header}><div><strong>{user.displayName || user.username}</strong><span>{user.role === "ADMIN" ? "Quản trị viên" : "Người dùng"}</span></div><button type="button" onClick={() => void logout()}>Đăng xuất</button></header><div className={styles.content}>{children}</div></section>

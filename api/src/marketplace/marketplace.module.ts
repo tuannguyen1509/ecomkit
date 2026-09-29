@@ -8,10 +8,12 @@ import { ShopeeOAuthService } from "./shopee-oauth.service.js";
 import { ShopeeOAuthStateStore } from "./shopee-oauth-state.store.js";
 import { ShopeeTokenService } from "./shopee-token.service.js";
 import { ShopeeOrderClient } from "./shopee-order.client.js";
+import { MarketplaceProviderConfigController } from "./marketplace-provider-config.controller.js";
+import { MarketplaceProviderConfigService } from "./marketplace-provider-config.service.js";
 
 @Module({
-  controllers: [ShopeeOAuthController],
-  providers: [MarketplaceCredentialService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService, ShopeeOAuthStateStore, ShopeeOAuthService, ShopeeTokenService, ShopeeOrderClient],
-  exports: [MarketplaceCredentialService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService]
+  controllers: [ShopeeOAuthController, MarketplaceProviderConfigController],
+  providers: [MarketplaceCredentialService, MarketplaceProviderConfigService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService, ShopeeOAuthStateStore, ShopeeOAuthService, ShopeeTokenService, ShopeeOrderClient],
+  exports: [MarketplaceCredentialService, MarketplaceProviderConfigService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService]
 })
 export class MarketplaceModule {}

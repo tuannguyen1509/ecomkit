@@ -49,10 +49,11 @@ export class RedisDistributedLockProvider implements DistributedLockProvider {
 }
 
 export class ApiShopeeTokenRefreshClient implements ShopeeTokenRefreshClient {
-  constructor(private readonly clientFactory: () => ApiShopeeRefreshClient = () => new ShopeeHttpClient(loadShopeeRuntimeConfig())) {}
+  constructor(private readonly clientFactory?: () => ApiShopeeRefreshClient, private readonly configFactory?: () => Promise<ReturnType<typeof loadShopeeRuntimeConfig>>) {}
   async refreshShopToken(input: Readonly<{ shopId: string; refreshToken: string }>) {
     try {
-      const response = await this.clientFactory().requestPublic({ operation: "SHOPEE_TOKEN_REFRESH", apiPath: "/api/v2/auth/access_token/get", method: "POST", body: { refresh_token: input.refreshToken, partner_id: Number(loadShopeeRuntimeConfig().partnerId), shop_id: Number(input.shopId) } });
+      const config = this.configFactory ? await this.configFactory() : loadShopeeRuntimeConfig(); const client = this.clientFactory?.() ?? new ShopeeHttpClient(config);
+      const response = await client.requestPublic<RefreshResponse>({ operation: "SHOPEE_TOKEN_REFRESH", apiPath: "/api/v2/auth/access_token/get", method: "POST", body: { refresh_token: input.refreshToken, partner_id: Number(config.partnerId), shop_id: Number(input.shopId) } });
       if (response.error === "common.error_auth") throw new MarketplaceLifecycleError("SHOPEE_REAUTH_REQUIRED", false, response.request_id);
       if (response.error) throw new MarketplaceLifecycleError("SHOPEE_REFRESH_FAILED", false, response.request_id);
       return { accessToken: response.response?.access_token, refreshToken: response.response?.refresh_token, expireIn: response.response?.expire_in, requestId: response.request_id };

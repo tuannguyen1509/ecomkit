@@ -26,6 +26,7 @@
     "test:marketplace-redis-outage": "tsx src/marketplace/marketplace-redis-outage.integration-test.ts",
     "test:shopee-oauth": "tsx src/marketplace/shopee-oauth.integration-test.ts",
     "test:shopee-oauth-state": "tsx src/marketplace/shopee-oauth-state.integration-test.ts",
+    "test:marketplace-provider-config": "tsx src/marketplace/marketplace-provider-config.integration-test.ts",
     "test:shopee-token": "tsx src/marketplace/shopee-token.integration-test.ts",
     "test:shopee-order-client": "tsx src/marketplace/shopee-order.client.test.ts",
     "test:batch-queue-authenticated": "tsx src/queue/batch-queue-authenticated.integration-test.ts",

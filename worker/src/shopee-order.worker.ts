@@ -10,6 +10,7 @@ import {
 import { loadShopeeRuntimeConfig, ShopeeConfigError, ShopeeHttpClient, ShopeeHttpError } from "@ecomkit/shared";
 import type { ShopeeResponse } from "@ecomkit/shared";
 import { createWorkerShopeeCredentialLifecycle, type WorkerRedisDistributedLockProvider } from "./shopee-lifecycle.worker.js";
+import { createWorkerShopeeAppConfigResolver } from "./shopee-app-config.worker.js";
 
 type ShopeeOrderListResponse = { more?: boolean; next_cursor?: string; order_list?: Array<Record<string, unknown>> };
 type ShopeeOrderDetailResponse = { order_list?: Array<Record<string, unknown>> };
@@ -23,11 +24,12 @@ export class WorkerShopeeAccessCredentialProvider implements ShopeeAccessCredent
 }
 
 export class WorkerShopeeOrderTransport implements ShopeeOrderTransport {
-  constructor(private readonly clientFactory: () => WorkerShopeeOrderShopClient = () => new ShopeeHttpClient(loadShopeeRuntimeConfig())) {}
+  constructor(private readonly clientFactory?: () => WorkerShopeeOrderShopClient) {}
+  private async client(): Promise<WorkerShopeeOrderShopClient> { return this.clientFactory?.() ?? new ShopeeHttpClient(await createWorkerShopeeAppConfigResolver().resolve()); }
 
   async list(credential: Awaited<ReturnType<ShopeeAccessCredentialProvider["ensureValidAccessToken"]>>, input: Parameters<ShopeeOrderTransport["list"]>[1]) {
     try {
-      const result = await this.clientFactory().requestShop<ShopeeOrderListResponse>({
+      const result = await (await this.client()).requestShop<ShopeeOrderListResponse>({
         operation: "SHOPEE_ORDER_LIST", apiPath: "/api/v2/order/get_order_list", method: "GET", accessToken: credential.accessToken, shopId: credential.shopId,
         query: { time_range_field: input.timeRangeField, time_from: input.timeFrom, time_to: input.timeTo, page_size: input.pageSize, cursor: input.cursor, order_status: input.orderStatus, response_optional_fields: input.responseOptionalFields, request_order_status_pending: input.requestOrderStatusPending },
       });
@@ -38,7 +40,7 @@ export class WorkerShopeeOrderTransport implements ShopeeOrderTransport {
 
   async details(credential: Awaited<ReturnType<ShopeeAccessCredentialProvider["ensureValidAccessToken"]>>, orderSns: readonly string[], options: ShopeeOrderDetailOptions = {}) {
     try {
-      const result = await this.clientFactory().requestShop<ShopeeOrderDetailResponse>({
+      const result = await (await this.client()).requestShop<ShopeeOrderDetailResponse>({
         operation: "SHOPEE_ORDER_DETAIL", apiPath: "/api/v2/order/get_order_detail", method: "GET", accessToken: credential.accessToken, shopId: credential.shopId,
         query: { order_sn_list: orderSns.join(","), response_optional_fields: options.responseOptionalFields, request_order_status_pending: options.requestOrderStatusPending },
       });

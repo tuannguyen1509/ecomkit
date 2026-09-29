@@ -13,6 +13,7 @@ import {
 import { decryptMarketplaceCredential, encryptMarketplaceCredential, loadShopeeRuntimeConfig, ShopeeHttpClient, ShopeeHttpError } from "@ecomkit/shared";
 import type { ShopeeResponse } from "@ecomkit/shared";
 import { Redis } from "ioredis";
+import { createWorkerShopeeAppConfigResolver } from "./shopee-app-config.worker.js";
 
 type RefreshResponse = { access_token?: string; refresh_token?: string; expire_in?: number };
 export type WorkerShopeeRefreshTransport = { requestPublic(request: { operation: string; apiPath: string; method: "POST"; body: unknown }): Promise<ShopeeResponse<RefreshResponse>> };
@@ -52,10 +53,11 @@ export class WorkerRedisDistributedLockProvider implements DistributedLockProvid
 }
 
 export class WorkerShopeeTokenRefreshClient implements ShopeeTokenRefreshClient {
-  constructor(private readonly transportFactory: () => WorkerShopeeRefreshTransport = () => new ShopeeHttpClient(loadShopeeRuntimeConfig())) {}
+  constructor(private readonly transportFactory?: () => WorkerShopeeRefreshTransport) {}
   async refreshShopToken(input: Readonly<{ shopId: string; refreshToken: string }>) {
     try {
-      const response = await this.transportFactory().requestPublic({ operation: "SHOPEE_TOKEN_REFRESH", apiPath: "/api/v2/auth/access_token/get", method: "POST", body: { refresh_token: input.refreshToken, partner_id: Number(loadShopeeRuntimeConfig().partnerId), shop_id: Number(input.shopId) } });
+      const config = this.transportFactory ? loadShopeeRuntimeConfig() : await createWorkerShopeeAppConfigResolver().resolve(); const transport = this.transportFactory?.() ?? new ShopeeHttpClient(config);
+      const response = await transport.requestPublic<RefreshResponse>({ operation: "SHOPEE_TOKEN_REFRESH", apiPath: "/api/v2/auth/access_token/get", method: "POST", body: { refresh_token: input.refreshToken, partner_id: Number(config.partnerId), shop_id: Number(input.shopId) } });
       if (response.error === "common.error_auth") throw new MarketplaceLifecycleError("SHOPEE_REAUTH_REQUIRED", false, response.request_id);
       if (response.error) throw new MarketplaceLifecycleError("SHOPEE_REFRESH_FAILED", false, response.request_id);
       return { accessToken: response.response?.access_token, refreshToken: response.response?.refresh_token, expireIn: response.response?.expire_in, requestId: response.request_id };

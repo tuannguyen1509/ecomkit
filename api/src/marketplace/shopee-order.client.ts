@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Optional, ServiceUnavailableException } from "@nestjs/common";
 import { ShopeeOrderClientCore, ShopeeOrderClientError, type ShopeeOrderDetailOptions, type ShopeeOrderListInput } from "@ecomkit/marketplace-server";
 import { ShopeeTokenService } from "./shopee-token.service.js";
 import { ApiShopeeAccessCredentialProvider, ApiShopeeOrderTransport, type ApiShopeeOrderShopClient } from "./shopee-order.adapters.js";
+import { MarketplaceProviderConfigService } from "./marketplace-provider-config.service.js";
 
 export type ShopeeTimeRangeField = "create_time" | "update_time";
 export type ShopeeOrderStatus = "UNPAID" | "READY_TO_SHIP" | "PROCESSED" | "SHIPPED" | "COMPLETED" | "IN_CANCEL" | "CANCELLED" | "INVOICE_PENDING";
@@ -14,7 +15,7 @@ export { batchShopeeOrderSns as batchShopeeOrderSn, splitShopeeOrderWindows as s
 @Injectable()
 export class ShopeeOrderClient {
   private readonly core: ShopeeOrderClientCore;
-  constructor(tokens: ShopeeTokenService, clientFactory?: () => ApiShopeeOrderShopClient) { this.core = new ShopeeOrderClientCore(new ApiShopeeAccessCredentialProvider(tokens), new ApiShopeeOrderTransport(clientFactory)); }
+  constructor(@Inject(ShopeeTokenService) tokens: ShopeeTokenService, @Optional() clientFactory?: () => ApiShopeeOrderShopClient, @Optional() @Inject(MarketplaceProviderConfigService) configs?: MarketplaceProviderConfigService) { this.core = new ShopeeOrderClientCore(new ApiShopeeAccessCredentialProvider(tokens), new ApiShopeeOrderTransport(clientFactory, configs ? () => configs.resolveRuntime() : undefined)); }
   async listOrders(connectionId: string, input: { timeRangeField: ShopeeTimeRangeField; timeFrom: number; timeTo: number; pageSize?: number; cursor?: string; orderStatus?: ShopeeOrderStatus; responseOptionalFields?: string; requestOrderStatusPending?: boolean }): Promise<{ orders: ShopeeOrderListItem[]; more: boolean; nextCursor?: string; requestId?: string }> {
     try { return await this.core.listOrders(connectionId, input as ShopeeOrderListInput) as { orders: ShopeeOrderListItem[]; more: boolean; nextCursor?: string; requestId?: string }; } catch (error) { throw this.toNestError(error); }
   }

@@ -90,8 +90,33 @@ model User {
   sessions                      Session[]
   marketplaceConnectionsCreated MarketplaceConnection[] @relation("MarketplaceConnectionCreatedBy")
   marketplaceSyncRunsTriggered  MarketplaceSyncRun[]    @relation("MarketplaceSyncRunTriggeredBy")
+  marketplaceProviderConfigsCreated MarketplaceProviderConfig[] @relation("MarketplaceProviderConfigCreatedBy")
+  marketplaceProviderConfigsUpdated MarketplaceProviderConfig[] @relation("MarketplaceProviderConfigUpdatedBy")
 
   @@map("users")
+}
+
+model MarketplaceProviderConfig {
+  id                    String   @id @default(cuid())
+  platform              Platform @unique
+  environment           String
+  partnerId             String   @map("partner_id")
+  partnerSecretEnvelope String   @map("partner_secret_envelope") @db.Text
+  redirectUri           String   @map("redirect_uri") @db.Text
+  isEnabled             Boolean  @default(true) @map("is_enabled")
+  createdById           String?  @map("created_by_id")
+  updatedById           String?  @map("updated_by_id")
+  lastTestedAt          DateTime? @map("last_tested_at")
+  lastTestStatus        String?  @map("last_test_status")
+  lastTestCode          String?  @map("last_test_code")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  createdBy User? @relation("MarketplaceProviderConfigCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy User? @relation("MarketplaceProviderConfigUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([isEnabled])
+  @@map("marketplace_provider_configs")
 }
 
 model Session {

@@ -14,6 +14,7 @@
     "test:shopee-lifecycle": "tsx --tsconfig tsconfig.json src/shopee-lifecycle.integration-test.ts",
     "test:shopee-order-client": "tsx --tsconfig tsconfig.json src/shopee-order.worker.test.ts",
     "test:shopee-adapter": "tsx --tsconfig tsconfig.json src/shopee-marketplace.adapter.test.ts",
+    "test:shopee-app-config": "tsx --tsconfig tsconfig.json src/shopee-app-config.worker.integration-test.ts",
     "test": "node -e \"console.log('worker foundation test passed')\""
   },
   "dependencies": {

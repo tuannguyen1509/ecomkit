@@ -21,11 +21,12 @@ export class ApiShopeeAccessCredentialProvider implements ShopeeAccessCredential
 }
 
 export class ApiShopeeOrderTransport implements ShopeeOrderTransport {
-  constructor(private readonly clientFactory: () => ApiShopeeOrderShopClient = () => new ShopeeHttpClient(loadShopeeRuntimeConfig())) {}
+  constructor(private readonly clientFactory?: () => ApiShopeeOrderShopClient, private readonly configFactory?: () => Promise<ReturnType<typeof loadShopeeRuntimeConfig>>) {}
+  private async client(): Promise<ApiShopeeOrderShopClient> { return this.clientFactory?.() ?? new ShopeeHttpClient(this.configFactory ? await this.configFactory() : loadShopeeRuntimeConfig()); }
 
   async list(credential: Awaited<ReturnType<ShopeeAccessCredentialProvider["ensureValidAccessToken"]>>, input: Parameters<ShopeeOrderTransport["list"]>[1]) {
     try {
-      const result = await this.clientFactory().requestShop<ShopeeOrderListResponse>({
+      const result = await (await this.client()).requestShop<ShopeeOrderListResponse>({
         operation: "SHOPEE_ORDER_LIST", apiPath: "/api/v2/order/get_order_list", method: "GET", accessToken: credential.accessToken, shopId: credential.shopId,
         query: { time_range_field: input.timeRangeField, time_from: input.timeFrom, time_to: input.timeTo, page_size: input.pageSize, cursor: input.cursor, order_status: input.orderStatus, response_optional_fields: input.responseOptionalFields, request_order_status_pending: input.requestOrderStatusPending },
       });
@@ -36,7 +37,7 @@ export class ApiShopeeOrderTransport implements ShopeeOrderTransport {
 
   async details(credential: Awaited<ReturnType<ShopeeAccessCredentialProvider["ensureValidAccessToken"]>>, orderSns: readonly string[], options: ShopeeOrderDetailOptions = {}) {
     try {
-      const result = await this.clientFactory().requestShop<ShopeeOrderDetailResponse>({
+      const result = await (await this.client()).requestShop<ShopeeOrderDetailResponse>({
         operation: "SHOPEE_ORDER_DETAIL", apiPath: "/api/v2/order/get_order_detail", method: "GET", accessToken: credential.accessToken, shopId: credential.shopId,
         query: { order_sn_list: orderSns.join(","), response_optional_fields: options.responseOptionalFields, request_order_status_pending: options.requestOrderStatusPending },
       });
