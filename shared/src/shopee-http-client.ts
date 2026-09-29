@@ -22,6 +22,10 @@ const baseUrls: Record<ShopeeEnvironment, string> = {
   production: "https://partner.shopeemobile.com",
   sandbox: "https://openplatform.sandbox.test-stable.shopee.sg"
 };
+const authorizationBaseUrls: Record<ShopeeEnvironment, string> = {
+  production: "https://open.shopee.com",
+  sandbox: "https://open.sandbox.test-stable.shopee.com"
+};
 
 export function loadShopeeRuntimeConfig(env: Record<string, string | undefined> = process.env): ShopeeRuntimeConfig {
   const partnerId = env.SHOPEE_PARTNER_ID?.trim();
@@ -33,6 +37,7 @@ export function loadShopeeRuntimeConfig(env: Record<string, string | undefined> 
 }
 
 export function getShopeeBaseUrl(environment: ShopeeEnvironment): string { return baseUrls[environment]; }
+export function getShopeeAuthorizationBaseUrl(environment: ShopeeEnvironment): string { return authorizationBaseUrls[environment]; }
 export function hmacSha256Hex(key: string | Buffer, value: string): string { return createHmac("sha256", key).update(value, "utf8").digest("hex"); }
 
 export class ShopeeSigner {

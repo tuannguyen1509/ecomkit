@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { BadRequestException, ConflictException, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { MarketplaceConnectionStatus, Platform, prisma } from "@ecomkit/database";
-import { loadShopeeRuntimeConfig, ShopeeHttpClient } from "@ecomkit/shared";
+import { getShopeeAuthorizationBaseUrl, loadShopeeRuntimeConfig, ShopeeHttpClient } from "@ecomkit/shared";
 import type { ShopeeEnvironment, ShopeeResponse } from "@ecomkit/shared";
 import { MarketplaceCredentialService } from "./marketplace-credential.service.js";
 import { ShopeeOAuthStateStore, type ShopeeOAuthStateContext } from "./shopee-oauth-state.store.js";
@@ -9,7 +9,6 @@ import { ShopeeOAuthStateStore, type ShopeeOAuthStateContext } from "./shopee-oa
 type TokenResponse = { access_token?: string; refresh_token?: string; expire_in?: number };
 type TokenClient = { requestPublic(request: { operation: string; apiPath: string; method: "POST"; body: unknown }): Promise<ShopeeResponse<TokenResponse>> };
 type OAuthConfig = { environment: ShopeeEnvironment; partnerId: string; redirectUri: string; ttlSeconds: number };
-const authHosts: Record<ShopeeEnvironment, string> = { production: "https://open.shopee.com", sandbox: "https://open.sandbox.test-stable.shopee.com" };
 
 function config(): OAuthConfig {
   const runtime = loadShopeeRuntimeConfig(); const redirectUri = process.env.SHOPEE_REDIRECT_URI?.trim();
@@ -28,7 +27,7 @@ export class ShopeeOAuthService {
     const current = config(); const state = randomBytes(32).toString("base64url");
     const context: ShopeeOAuthStateContext = { platform: "SHOPEE", initiatingUserId, environment: current.environment, redirectUri: current.redirectUri, createdAt: new Date().toISOString() };
     try { await this.states.save(state, context, current.ttlSeconds); } catch { throw new ServiceUnavailableException({ errorCode: "SHOPEE_OAUTH_STATE_STORE_UNAVAILABLE", message: "Shopee authorization cannot be started now." }); }
-    const url = new URL("/auth", authHosts[current.environment]);
+    const url = new URL("/auth", getShopeeAuthorizationBaseUrl(current.environment));
     url.searchParams.set("partner_id", current.partnerId); url.searchParams.set("auth_type", "seller"); url.searchParams.set("redirect_uri", current.redirectUri); url.searchParams.set("response_type", "code"); url.searchParams.set("state", state);
     return { authorizationUrl: url.toString(), expiresIn: current.ttlSeconds };
   }

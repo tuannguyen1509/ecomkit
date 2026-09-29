@@ -34,6 +34,12 @@ async function run(): Promise<void> {
   const reconnect = await service.start(user.id); await service.callback({ code: "TEST_CODE_2", shopId: "900001", state: required(new URL(reconnect.authorizationUrl).searchParams.get("state")) });
   const reconnected = await prisma.marketplaceConnection.findUniqueOrThrow({ where: { id: row.id } }); if (reconnected.status !== MarketplaceConnectionStatus.ACTIVE) throw new Error("reauthorization regression");
   await service.callback({ mainAccountId: "1", state: "bad" }).then(() => { throw new Error("main account accepted"); }, () => undefined);
+  await service.callback({ code: "TEST_CODE", shopId: "900001" }).then(() => { throw new Error("missing state accepted"); }, () => undefined);
+  process.env.SHOPEE_ENV = "production"; process.env.SHOPEE_REDIRECT_URI = "https://ecom.vuikhoe.vn/api/marketplaces/shopee/oauth/callback";
+  const productionStart = await service.start(user.id); const production = new URL(productionStart.authorizationUrl);
+  if (production.origin !== "https://open.shopee.com" || production.pathname !== "/auth" || production.searchParams.get("redirect_uri") !== process.env.SHOPEE_REDIRECT_URI || production.searchParams.get("partner_id") !== "123456") throw new Error("production authorization URL regression");
+  const failing = new ShopeeOAuthService(new MarketplaceCredentialService(), states as never, () => ({ requestPublic: async () => { throw new Error("TEST_PARTNER_KEY_SECRET TEST_ACCESS_TOKEN_SECRET TEST_REFRESH_TOKEN_SECRET TEST_ENCRYPTION_KEY_SECRET"); } }));
+  await failing.callback({ code: "TEST_FAILING_CODE", shopId: "900002", state: required(production.searchParams.get("state")) }).then(() => { throw new Error("token failure accepted"); }, (error: unknown) => { if (JSON.stringify(error).includes("_SECRET")) throw new Error("OAuth error leaked a secret marker"); });
   await prisma.marketplaceConnection.delete({ where: { id: row.id } });
   console.log("Shopee OAuth offline integration test passed");
 }

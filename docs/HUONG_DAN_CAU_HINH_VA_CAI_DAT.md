@@ -178,3 +178,22 @@ The API limits JSON bodies to 1 MB and retains the upload limits documented abov
 To rotate `WORKER_INTERNAL_API_KEY`, generate a new strong value in the deployment secret store, set the same value for API and Worker, recreate both containers, and verify a synthetic queue job. Never put the value in `.env.example`, source, logs, or a queue payload. Further hardening notes are in `docs/security-hardening.md`.
 
 For a Docker smoke test, bootstrap a technical ADMIN, sign in, create/upload a synthetic batch, and call `POST /api/batches/:batchId/process` with the session cookie. The Worker then authenticates its Excel/PDF/matching calls using the internal header. Do not send the Worker key from a browser or include it in a queue job.
+
+## Stage 14C.5A -- Cấu hình Shopee live/test-shop
+
+Shopee không cần thêm Docker service. API và Worker tiếp tục dùng PostgreSQL/Redis hiện có. Các biến Shopee để trống không làm generic startup thất bại; chúng chỉ bắt buộc khi thực sự chạy OAuth hoặc provider operation.
+
+```text
+SHOPEE_ENV=sandbox
+SHOPEE_PARTNER_ID=
+SHOPEE_PARTNER_KEY=
+SHOPEE_REDIRECT_URI=http://localhost:3001/api/marketplaces/shopee/oauth/callback
+SHOPEE_HTTP_TIMEOUT_MS=30000
+SHOPEE_OAUTH_STATE_TTL_SECONDS=600
+SHOPEE_ACCESS_TOKEN_REFRESH_SKEW_SECONDS=300
+SHOPEE_REFRESH_LOCK_TTL_MS=30000
+SHOPEE_INCREMENTAL_OVERLAP_SECONDS=300
+MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY=
+```
+
+`SHOPEE_PARTNER_KEY` và `MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY` là secret. Encryption key phải là Base64 của đúng 32 random bytes và phải giống nhau ở API/Worker. Không commit giá trị thật, không ghi log, không gửi ra browser/queue/Redis. Production dùng `SHOPEE_ENV=production` và callback chính xác `https://ecom.vuikhoe.vn/api/marketplaces/shopee/oauth/callback`; production callback phải HTTPS và public. Xem checklist và quy trình đầy đủ tại [shopee-live-test-runbook.md](shopee-live-test-runbook.md).
