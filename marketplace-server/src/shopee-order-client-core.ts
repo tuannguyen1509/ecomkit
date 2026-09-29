@@ -1,8 +1,9 @@
 import type { ShopeeAccessCredential } from "./lifecycle-contracts.js";
+import type { ShopeeOrderItemForNormalization } from "./shopee-normalizer.js";
 
 export type ShopeeTimeRangeField = "create_time" | "update_time";
 export type ShopeeOrderListItem = { order_sn?: string; order_status?: string; booking_sn?: string };
-export type ShopeeOrderDetail = { order_sn?: string; region?: string; currency?: string; total_amount?: number; order_status?: string; create_time?: number; update_time?: number; recipient_address?: Record<string, unknown>; item_list?: Record<string, unknown>[]; [key: string]: unknown };
+export type ShopeeOrderDetail = { order_sn?: string; region?: string; currency?: string; total_amount?: number; order_status?: string; create_time?: number; update_time?: number; recipient_address?: Record<string, unknown>; item_list?: ShopeeOrderItemForNormalization[]; [key: string]: unknown };
 export type ShopeeOrderListInput = Readonly<{ timeRangeField: ShopeeTimeRangeField; timeFrom: number; timeTo: number; pageSize?: number; cursor?: string; orderStatus?: string; responseOptionalFields?: string; requestOrderStatusPending?: boolean }>;
 export type ShopeeOrderDetailOptions = Readonly<{ responseOptionalFields?: string; requestOrderStatusPending?: boolean }>;
 export type ShopeeOrderListPage = Readonly<{ orders: ShopeeOrderListItem[]; more: boolean; nextCursor?: string; requestId?: string }>;
