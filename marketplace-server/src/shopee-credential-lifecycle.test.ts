@@ -104,5 +104,16 @@ for (const invalid of [connection({ status: "DISABLED" }), connection({ status: 
 }
 {
   const setup = create(); setup.repo.current = connection({ credentialEnvelope: null }); await expectError(() => setup.lifecycle.ensureValidAccessToken("connection-1"), "SHOPEE_REAUTH_REQUIRED", false); assert(setup.repo.reauths === 1 && setup.lock.acquires === 0, "invalid encrypted credential requires reconnect");
+
+{
+  const external = credential({ refreshToken: undefined, refreshTokenExpiresAt: undefined, providerMetadata: { shopId: "123", credentialSource: "EXTERNAL_IMPORT", refreshOwnership: "EXTERNAL" } });
+  const setup = create(external); const result = await setup.lifecycle.ensureValidAccessToken("connection-1");
+  assert(result.accessToken === "TEST_ACCESS_TOKEN_SECRET" && setup.refresh.calls.length === 0 && setup.lock.acquires === 0, "valid external token is read-only");
+}
+{
+  const external = credential({ refreshToken: undefined, refreshTokenExpiresAt: undefined, tokenExpiresAt: new Date(now.valueOf() + 120_000).toISOString(), providerMetadata: { shopId: "123", credentialSource: "EXTERNAL_IMPORT", refreshOwnership: "EXTERNAL" } });
+  const setup = create(external); await expectError(() => setup.lifecycle.ensureValidAccessToken("connection-1"), "EXTERNAL_ACCESS_TOKEN_EXPIRED", false);
+  assert(setup.refresh.calls.length === 0 && setup.lock.acquires === 0 && setup.repo.writes === 0, "external token never refreshes");
+}
 }
 console.log("Shopee credential lifecycle core parity tests passed");

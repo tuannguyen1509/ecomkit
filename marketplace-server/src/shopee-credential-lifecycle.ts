@@ -19,7 +19,7 @@ export type ShopeeCredentialLifecycleConfig = Readonly<{
 
 type LoadedCredential = Readonly<{
   connection: MarketplaceLifecycleConnection;
-  credential: Required<Pick<ShopeeCredential, "accessToken" | "refreshToken" | "tokenExpiresAt" | "refreshTokenExpiresAt">> & ShopeeCredential;
+  credential: Required<Pick<ShopeeCredential, "accessToken" | "tokenExpiresAt">> & ShopeeCredential;
 }>;
 
 /**
@@ -42,6 +42,7 @@ export class ShopeeCredentialLifecycle {
   public async ensureValidAccessToken(connectionId: string): Promise<ShopeeAccessCredential> {
     const initial = await this.load(connectionId);
     if (this.isAccessTokenValid(initial.credential)) return this.toAccessCredential(initial);
+    if (this.isExternalCredential(initial.credential)) throw new MarketplaceLifecycleError("EXTERNAL_ACCESS_TOKEN_EXPIRED", false);
     if (this.isRefreshTokenExpired(initial.credential)) return this.reauthRequired(connectionId);
 
     const key = `shopee-refresh-lock-${connectionId}`;
@@ -67,10 +68,12 @@ export class ShopeeCredentialLifecycle {
     try {
       const current = await this.load(connectionId);
       if (this.isAccessTokenValid(current.credential)) return this.toAccessCredential(current);
+      if (this.isExternalCredential(current.credential)) throw new MarketplaceLifecycleError("EXTERNAL_TOKEN_REFRESH_FORBIDDEN", false);
       if (this.isRefreshTokenExpired(current.credential)) return this.reauthRequired(connectionId);
 
       let response;
       try {
+        if (!current.credential.refreshToken) throw new MarketplaceLifecycleError("SHOPEE_CREDENTIAL_INVALID", false);
         response = await this.refreshClient.refreshShopToken({
           shopId: current.connection.externalShopId,
           refreshToken: current.credential.refreshToken,
@@ -139,10 +142,14 @@ export class ShopeeCredentialLifecycle {
 
   private isCredentialComplete(credential: ShopeeCredential): credential is LoadedCredential["credential"] {
     return typeof credential.accessToken === "string" && credential.accessToken.length > 0
-      && typeof credential.refreshToken === "string" && credential.refreshToken.length > 0
       && typeof credential.tokenExpiresAt === "string" && Number.isFinite(new Date(credential.tokenExpiresAt).valueOf())
-      && typeof credential.refreshTokenExpiresAt === "string" && Number.isFinite(new Date(credential.refreshTokenExpiresAt).valueOf())
+      && (this.isExternalCredential(credential) || (typeof credential.refreshToken === "string" && credential.refreshToken.length > 0
+        && typeof credential.refreshTokenExpiresAt === "string" && Number.isFinite(new Date(credential.refreshTokenExpiresAt).valueOf())))
       && typeof credential.providerMetadata?.shopId === "string" && credential.providerMetadata.shopId.length > 0;
+  }
+
+  private isExternalCredential(credential: ShopeeCredential): boolean {
+    return credential.providerMetadata?.credentialSource === "EXTERNAL_IMPORT" && credential.providerMetadata?.refreshOwnership === "EXTERNAL";
   }
 
   private isAccessTokenValid(credential: LoadedCredential["credential"]): boolean {
@@ -150,7 +157,7 @@ export class ShopeeCredentialLifecycle {
   }
 
   private isRefreshTokenExpired(credential: LoadedCredential["credential"]): boolean {
-    return new Date(credential.refreshTokenExpiresAt).valueOf() <= this.clock.now().valueOf();
+    return !credential.refreshTokenExpiresAt || new Date(credential.refreshTokenExpiresAt).valueOf() <= this.clock.now().valueOf();
   }
 
   private toAccessCredential(loaded: LoadedCredential): ShopeeAccessCredential {

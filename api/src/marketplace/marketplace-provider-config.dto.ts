@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
+import { IsBoolean, IsDateString, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, IsUrl, Max, MaxLength, Min } from "class-validator";
 
 export class UpdateShopeeProviderConfigDto {
   @IsIn(["sandbox", "production"])
@@ -11,4 +11,28 @@ export class UpdateShopeeProviderConfigDto {
   redirectUri!: string;
   @IsBoolean()
   enabled!: boolean;
+}
+
+export class ImportShopeeExternalTokenDto {
+  @IsString() @IsNotEmpty() @MaxLength(100)
+  shopId!: string;
+  @IsString() @IsNotEmpty() @MaxLength(8192)
+  accessToken!: string;
+  @IsDateString()
+  accessTokenExpiresAt!: string;
+}
+
+export class TestShopeeLiveReadDto {
+  @IsString() @IsNotEmpty()
+  connectionId!: string;
+  @IsIn(["create_time", "update_time"])
+  timeRangeField!: "create_time" | "update_time";
+  @IsInt() @Min(0)
+  timeFrom!: number;
+  @IsInt() @Min(1)
+  timeTo!: number;
+  @IsOptional() @IsInt() @Min(1) @Max(100)
+  pageSize?: number;
+  @IsOptional() @IsString() @MaxLength(100)
+  orderStatus?: string;
 }

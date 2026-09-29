@@ -321,3 +321,11 @@ Production callback configuration is `https://ecom.vuikhoe.vn/api/marketplaces/s
 ADMIN can manage Shopee application configuration at `/marketplaces`. Provider configuration is stored once per platform in `MarketplaceProviderConfig`; Partner Key is an AES-256-GCM versioned envelope and is never returned by the API or prefilled in the browser. `MARKETPLACE_CREDENTIAL_ENCRYPTION_KEY` remains runtime-only and is never accepted by the UI.
 
 Runtime resolution is provider-neutral and server-only: an enabled database configuration takes precedence, while absent or disabled configuration falls back to the existing environment variables. API OAuth and Worker provider runtime use the same resolver semantics without Worker-to-API traffic. The local **Kiểm tra cấu hình** action validates decryption, environment, redirect URI, endpoint selection, deterministic signing, OAuth URL construction, and API/Worker parity with zero provider network requests. Lazada and TikTok Shop remain disabled placeholders. Live Shopee OAuth remains `DEFERRED_EXTERNAL`.
+
+## Stage 14C.6B external read-only validation mode
+
+ADMIN may import only Shop ID, access token, and access-token expiry. The token is encrypted in the existing marketplace credential envelope and tagged `EXTERNAL_IMPORT` with refresh ownership `EXTERNAL`; no refresh token is accepted or stored. Shared lifecycle logic rejects a near-expired or expired external token before acquiring a refresh lock or calling Shopee refresh.
+
+The Marketplace UI separates local **Kiểm tra cấu hình** from rate-limited **Test Shopee API**, which performs one explicitly bounded read-only Order List page. Safe status exposes ownership and expiry metadata, never the token. Exact legacy comparison is case-sensitive by `order_sn` using [the comparison record](shopee-legacy-comparison.md).
+
+Live validation remains `VALIDATION_PENDING`: the canonical runtime has no imported token/server encryption key and no exact-window legacy `order_sn` artifact was supplied. No real Shopee or legacy-system request occurred. Lazada/TikTok must not start until `SHOPEE_LEGACY_DATA_MATCH=PASS`.

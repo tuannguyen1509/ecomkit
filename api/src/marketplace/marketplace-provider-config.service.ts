@@ -1,9 +1,10 @@
 import { BadRequestException, ConflictException, Injectable } from "@nestjs/common";
-import { Platform, prisma } from "@ecomkit/database";
+import { MarketplaceConnectionStatus, Platform, prisma } from "@ecomkit/database";
 import { MarketplaceCredentialCryptoError, getShopeeAuthorizationBaseUrl, getShopeeBaseUrl, ShopeeSigner } from "@ecomkit/shared";
 import { ShopeeAppConfigError, ShopeeAppConfigResolver } from "@ecomkit/marketplace-server";
 import { MarketplaceCredentialService } from "./marketplace-credential.service.js";
 import type { UpdateShopeeProviderConfigDto } from "./marketplace-provider-config.dto.js";
+import type { ImportShopeeExternalTokenDto } from "./marketplace-provider-config.dto.js";
 
 const safeSelect = { platform: true, environment: true, partnerId: true, redirectUri: true, isEnabled: true, partnerSecretEnvelope: true, lastTestedAt: true, lastTestStatus: true, lastTestCode: true, createdAt: true, updatedAt: true } as const;
 export type SafeProviderConfig = { platform: "SHOPEE"; environment: string; partnerId: string; partnerIdConfigured: boolean; partnerSecretConfigured: boolean; redirectUri: string; enabled: boolean; encryptionReady: boolean; lastTestedAt: Date | null; lastTestStatus: string | null; lastTestCode: string | null; createdAt: Date; updatedAt: Date };
@@ -41,8 +42,25 @@ export class MarketplaceProviderConfigService {
     }
   }
   async overview() {
-    const connections = await prisma.marketplaceConnection.findMany({ where: { platform: Platform.SHOPEE }, orderBy: { updatedAt: "desc" }, select: { id: true, externalShopId: true, shopName: true, status: true, lastSuccessfulSyncAt: true, lastAttemptedSyncAt: true, createdAt: true, updatedAt: true, syncRuns: { orderBy: { createdAt: "desc" }, take: 10, select: { id: true, syncType: true, triggerType: true, status: true, errorCount: true, createdAt: true, completedAt: true } } } });
+    const rows = await prisma.marketplaceConnection.findMany({ where: { platform: Platform.SHOPEE }, orderBy: { updatedAt: "desc" }, select: { id: true, externalShopId: true, shopName: true, status: true, credentialEnvelope: true, lastSuccessfulSyncAt: true, lastAttemptedSyncAt: true, createdAt: true, updatedAt: true, syncRuns: { orderBy: { createdAt: "desc" }, take: 10, select: { id: true, syncType: true, triggerType: true, status: true, errorCount: true, createdAt: true, completedAt: true } } } });
+    const connections = rows.map(({ credentialEnvelope, ...row }) => { let metadata: Record<string, unknown> = {}; try { metadata = credentialEnvelope ? this.credentials.decryptCredential(credentialEnvelope).providerMetadata ?? {} : {}; } catch {} return { ...row, accessTokenConfigured: Boolean(credentialEnvelope), accessTokenExpiresAt: typeof metadata.accessTokenExpiresAt === "string" ? metadata.accessTokenExpiresAt : null, credentialSource: metadata.credentialSource === "EXTERNAL_IMPORT" ? "EXTERNAL_IMPORT" : "OAUTH", refreshOwnership: metadata.refreshOwnership === "EXTERNAL" ? "EXTERNAL" : "ECOMKIT", liveApiStatus: typeof metadata.liveApiStatus === "string" ? metadata.liveApiStatus : "NOT_TESTED", lastLiveTestedAt: typeof metadata.lastLiveTestedAt === "string" ? metadata.lastLiveTestedAt : null }; });
     return { config: await this.getShopee(), connections };
+  }
+  async importExternalToken(userId: string, input: ImportShopeeExternalTokenDto) {
+    await this.resolveRuntime();
+    const expiresAt = new Date(input.accessTokenExpiresAt);
+    if (!Number.isFinite(expiresAt.valueOf()) || expiresAt.valueOf() <= Date.now()) throw new BadRequestException({ errorCode: "EXTERNAL_ACCESS_TOKEN_EXPIRED", message: "The imported access token is expired." });
+    let envelope: string;
+    try { envelope = this.credentials.encryptCredential({ accessToken: input.accessToken, tokenExpiresAt: expiresAt.toISOString(), providerMetadata: { shopId: input.shopId.trim(), credentialSource: "EXTERNAL_IMPORT", refreshOwnership: "EXTERNAL", accessTokenExpiresAt: expiresAt.toISOString(), liveApiStatus: "NOT_TESTED" } }); }
+    catch { throw new ConflictException({ errorCode: "MARKETPLACE_ENCRYPTION_KEY_NOT_CONFIGURED", message: "Server encryption key is not configured." }); }
+    const row = await prisma.marketplaceConnection.upsert({ where: { platform_externalShopId: { platform: Platform.SHOPEE, externalShopId: input.shopId.trim() } }, create: { platform: Platform.SHOPEE, externalShopId: input.shopId.trim(), status: MarketplaceConnectionStatus.ACTIVE, credentialEnvelope: envelope, createdByUserId: userId }, update: { status: MarketplaceConnectionStatus.ACTIVE, credentialEnvelope: envelope }, select: { id: true, externalShopId: true, status: true, updatedAt: true } });
+    return { ...row, credentialSource: "EXTERNAL_IMPORT", refreshOwnership: "EXTERNAL", accessTokenConfigured: true, accessTokenExpiresAt: expiresAt.toISOString() };
+  }
+  async recordLiveTest(connectionId: string, status: "PASS" | "FAIL") {
+    const row = await prisma.marketplaceConnection.findUnique({ where: { id: connectionId }, select: { credentialEnvelope: true } });
+    if (!row?.credentialEnvelope) return;
+    const credential = this.credentials.decryptCredential(row.credentialEnvelope); const metadata = { ...(credential.providerMetadata ?? {}), liveApiStatus: status, lastLiveTestedAt: new Date().toISOString() };
+    await prisma.marketplaceConnection.update({ where: { id: connectionId }, data: { credentialEnvelope: this.credentials.encryptCredential({ ...credential, providerMetadata: metadata }) } });
   }
   private secret(envelope: string): string { const metadata = this.credentials.decryptCredential(envelope).providerMetadata; const value = metadata?.partnerSecret; if (typeof value !== "string" || !value) throw new Error("invalid provider secret"); return value; }
   private safe(row: any): SafeProviderConfig { return { platform: "SHOPEE", environment: row.environment, partnerId: row.partnerId, partnerIdConfigured: Boolean(row.partnerId), partnerSecretConfigured: Boolean(row.partnerSecretEnvelope), redirectUri: row.redirectUri, enabled: row.isEnabled, encryptionReady: this.encryptionReady(), lastTestedAt: row.lastTestedAt, lastTestStatus: row.lastTestStatus, lastTestCode: row.lastTestCode, createdAt: row.createdAt, updatedAt: row.updatedAt }; }
