@@ -525,6 +525,8 @@ Stage 14B.2 adds the nullable `credentialEnvelope` text field to `MarketplaceCon
 
 The generic `MarketplaceAdapter` contract and `MarketplaceAdapterRegistry` are also available for later provider slices. The contract models Ecomkit operations without provider-specific signing, URLs, or DTOs. No real adapter is registered in production during this stage; `UNKNOWN` and unregistered platforms fail deterministically. `MarketplaceConnectionService` has no HTTP controller yet. It manages already-identified connection metadata, safe status transitions, encrypted credential attach/replace/read for internal use, and soft disable. Safe DTOs exclude `credentialEnvelope` entirely.
 
+The current Worker production registry lazily resolves `Platform.SHOPEE` to the real provider adapter; this supersedes the earlier stage-local statement above. Synthetic end-to-end validation injects only the credential/provider transport boundary while retaining the production registry, adapter, shared order client, normalizer, generic persistence, Batch bridge, and checkpoint commit paths. Generic orchestration treats provider errors through their bounded `code` and `retryable` contract and sends only materially created or updated source orders to the Batch bridge, preventing overlap replay from creating duplicate canonical Orders.
+
 The pending OAuth context remains separate from a connection: Stage 14C will create a connection after a provider callback identifies `externalShopId`, preserving the `(platform, externalShopId)` uniqueness rule without placeholder shop IDs. Queue processing, active-sync locking, SyncRun execution, and provider APIs remain deferred to Stage 14B.3 and later.
 
 ## Stage 14B.3 mock sync lifecycle implementation record

@@ -5,7 +5,7 @@ import type { Prisma } from "@ecomkit/database";
 import { getMarketplaceSyncJobId } from "@ecomkit/shared";
 import type { MarketplaceAdapterContext, MarketplaceAdapterOrder } from "@ecomkit/shared";
 import { MarketplaceMockError } from "./marketplace-mock.adapter.js";
-import { createWorkerMarketplaceAdapterRegistry } from "./marketplace-adapter.registry.js";
+import { createWorkerMarketplaceAdapterRegistry, type WorkerMarketplaceAdapterRegistry } from "./marketplace-adapter.registry.js";
 
 export const MARKETPLACE_SYNC_QUEUE_NAME = process.env.MARKETPLACE_SYNC_QUEUE_NAME ?? "marketplace-sync";
 const redisConnection = { host: process.env.REDIS_HOST ?? "redis", port: Number(process.env.REDIS_PORT ?? "6379") };
@@ -46,6 +46,14 @@ function validateAdapterOrder(order: MarketplaceAdapterOrder): void {
   if (!order.providerUpdatedAt || Number.isNaN(new Date(order.providerUpdatedAt).valueOf()) || (order.normalizedData.providerUpdatedAt && order.normalizedData.providerUpdatedAt !== order.providerUpdatedAt)) throw new MarketplaceSyncExecutionError("MARKETPLACE_ORDER_TIMESTAMP_INVALID", false, "NORMALIZE_ORDER", 422);
 }
 
+function adapterExecutionError(error: unknown): MarketplaceSyncExecutionError | undefined {
+  if (error instanceof MarketplaceMockError) return new MarketplaceSyncExecutionError(error.code, error.retryable, "SYNC_ORDERS", error.httpStatus, error.retryable ? "The system will retry automatically." : "Review the marketplace source scenario.");
+  if (error && typeof error === "object" && "code" in error && typeof error.code === "string" && "retryable" in error && typeof error.retryable === "boolean") {
+    return new MarketplaceSyncExecutionError(error.code, error.retryable, "SYNC_ORDERS", undefined, error.retryable ? "The system will retry automatically." : "Review the marketplace connection and provider response.");
+  }
+  return undefined;
+}
+
 async function upsertOrder(connectionId: string, adapterOrder: MarketplaceAdapterOrder): Promise<"created" | "updated" | "unchanged"> {
   validateAdapterOrder(adapterOrder);
   const order = adapterOrder.normalizedData;
@@ -79,8 +87,8 @@ async function materializeBatch(connectionId: string, syncRunId: string, platfor
   });
 }
 
-export function startMarketplaceSyncWorker(options?: { queueName?: string; concurrency?: number }): Worker<MarketplaceSyncJobData> {
-  const adapters = createWorkerMarketplaceAdapterRegistry();
+export function startMarketplaceSyncWorker(options?: { queueName?: string; concurrency?: number; adapterRegistry?: WorkerMarketplaceAdapterRegistry }): Worker<MarketplaceSyncJobData> {
+  const adapters = options?.adapterRegistry ?? createWorkerMarketplaceAdapterRegistry();
   const worker = new Worker<MarketplaceSyncJobData>(options?.queueName ?? MARKETPLACE_SYNC_QUEUE_NAME, async (job) => {
     const lockKey = `marketplace-sync-lock-${job.data.connectionId}`;
     const ownership = randomUUID();
@@ -104,10 +112,10 @@ export function startMarketplaceSyncWorker(options?: { queueName?: string; concu
       let created = 0, updated = 0, normalized = 0, fetched = 0;
       let result;
       try { result = await adapter.syncOrders(context, { syncType: run.syncType, windowStart: run.windowStart, windowEnd: run.windowEnd, committedCheckpoint }); }
-      catch (error) { if (error instanceof MarketplaceMockError) throw new MarketplaceSyncExecutionError(error.code, error.retryable, "SYNC_ORDERS", error.httpStatus, error.retryable ? "The system will retry automatically." : "Review the marketplace source scenario."); throw error; }
+      catch (error) { throw adapterExecutionError(error) ?? error; }
       fetched = result.orders.length;
-      for (const order of result.orders) { const write = await upsertOrder(run.connectionId, order); if (write === "created") created++; if (write === "updated") updated++; normalized++; allOrders.push(order); }
-      const batchId = await materializeBatch(run.connectionId, run.id, run.connection.platform, run.connection.externalShopId, created + updated > 0 ? allOrders : []);
+      for (const order of result.orders) { const write = await upsertOrder(run.connectionId, order); if (write === "created") { created++; allOrders.push(order); } if (write === "updated") { updated++; allOrders.push(order); } normalized++; }
+      const batchId = await materializeBatch(run.connectionId, run.id, run.connection.platform, run.connection.externalShopId, allOrders);
       await prisma.$transaction(async (tx) => {
         await tx.marketplaceSyncRun.update({ where: { id: run.id }, data: { status: MarketplaceSyncStatus.SUCCESS, completedAt: new Date(), resultCursor: result.candidateCheckpoint ?? committedCheckpoint, ordersFetched: fetched, ordersNormalized: normalized, ordersCreated: created, ordersUpdated: updated } });
         await tx.marketplaceConnection.update({ where: { id: run.connectionId }, data: { ...(result.candidateCheckpoint !== undefined ? { syncCursor: result.candidateCheckpoint } : {}), lastSuccessfulSyncAt: new Date() } });
