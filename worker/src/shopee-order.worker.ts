@@ -7,7 +7,7 @@ import {
   type ShopeeOrderDetailOptions,
   type ShopeeOrderTransport,
 } from "@ecomkit/marketplace-server";
-import { loadShopeeRuntimeConfig, ShopeeHttpClient, ShopeeHttpError } from "@ecomkit/shared";
+import { loadShopeeRuntimeConfig, ShopeeConfigError, ShopeeHttpClient, ShopeeHttpError } from "@ecomkit/shared";
 import type { ShopeeResponse } from "@ecomkit/shared";
 import { createWorkerShopeeCredentialLifecycle, type WorkerRedisDistributedLockProvider } from "./shopee-lifecycle.worker.js";
 
@@ -54,6 +54,7 @@ export class WorkerShopeeOrderTransport implements ShopeeOrderTransport {
   }
   private toDomainError(error: unknown): ShopeeOrderClientError {
     if (error instanceof ShopeeOrderClientError) return error;
+    if (error instanceof ShopeeConfigError) return new ShopeeOrderClientError(error.code, false);
     if (error instanceof ShopeeHttpError) return new ShopeeOrderClientError("SHOPEE_ORDER_PROVIDER_TRANSIENT", error.safe.retryableHint, error.safe.requestId);
     return new ShopeeOrderClientError("SHOPEE_ORDER_PROVIDER_TRANSIENT", true);
   }

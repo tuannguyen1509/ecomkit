@@ -3,8 +3,9 @@ import { UnrecoverableError, Worker } from "bullmq";
 import { MarketplaceConnectionStatus, MarketplaceSyncStatus, Platform, prisma } from "@ecomkit/database";
 import type { Prisma } from "@ecomkit/database";
 import { getMarketplaceSyncJobId } from "@ecomkit/shared";
-import type { MarketplaceAdapter, MarketplaceAdapterContext, MarketplaceAdapterOrder } from "@ecomkit/shared";
-import { MarketplaceMockAdapter, MarketplaceMockError } from "./marketplace-mock.adapter.js";
+import type { MarketplaceAdapterContext, MarketplaceAdapterOrder } from "@ecomkit/shared";
+import { MarketplaceMockError } from "./marketplace-mock.adapter.js";
+import { createWorkerMarketplaceAdapterRegistry } from "./marketplace-adapter.registry.js";
 
 export const MARKETPLACE_SYNC_QUEUE_NAME = process.env.MARKETPLACE_SYNC_QUEUE_NAME ?? "marketplace-sync";
 const redisConnection = { host: process.env.REDIS_HOST ?? "redis", port: Number(process.env.REDIS_PORT ?? "6379") };
@@ -17,12 +18,6 @@ class MarketplaceSyncExecutionError extends Error {
     super(code);
     this.name = "MarketplaceSyncExecutionError";
   }
-}
-
-function registry(): Map<Platform, MarketplaceAdapter> {
-  const adapters = new Map<Platform, MarketplaceAdapter>();
-  if (process.env.MARKETPLACE_ENABLE_MOCK_ADAPTER === "true") adapters.set(Platform.SHOPEE, new MarketplaceMockAdapter());
-  return adapters;
 }
 
 async function recordTerminalError(syncRunId: string, error: MarketplaceSyncExecutionError): Promise<void> {
@@ -85,7 +80,7 @@ async function materializeBatch(connectionId: string, syncRunId: string, platfor
 }
 
 export function startMarketplaceSyncWorker(options?: { queueName?: string; concurrency?: number }): Worker<MarketplaceSyncJobData> {
-  const adapters = registry();
+  const adapters = createWorkerMarketplaceAdapterRegistry();
   const worker = new Worker<MarketplaceSyncJobData>(options?.queueName ?? MARKETPLACE_SYNC_QUEUE_NAME, async (job) => {
     const lockKey = `marketplace-sync-lock-${job.data.connectionId}`;
     const ownership = randomUUID();
