@@ -13,7 +13,7 @@ const withQueueTimeout = async <T>(operation: Promise<T>): Promise<T> => Promise
   new Promise<T>((_, reject) => setTimeout(() => reject(new Error("MARKETPLACE_QUEUE_OPERATION_TIMEOUT")), queueOperationTimeoutMs))
 ]);
 
-export type MarketplaceSyncRequest = { connectionId: string; triggeredByUserId?: string; triggerType?: MarketplaceSyncTrigger; syncType?: MarketplaceSyncType };
+export type MarketplaceSyncRequest = { connectionId: string; triggeredByUserId?: string; triggerType?: MarketplaceSyncTrigger; syncType?: MarketplaceSyncType; windowStart?: Date; windowEnd?: Date };
 export type MarketplaceSyncJobPayload = { connectionId: string; syncRunId: string };
 
 @Injectable()
@@ -30,13 +30,16 @@ export class MarketplaceSyncQueueService implements OnModuleDestroy {
       }
       const active = await tx.marketplaceSyncRun.findFirst({ where: { connectionId: input.connectionId, status: { in: activeStatuses } }, select: { id: true } });
       if (active) throw new ConflictException({ errorCode: "MARKETPLACE_SYNC_ALREADY_ACTIVE", message: "Marketplace connection already has an active sync." });
+      const syncType = input.syncType ?? MarketplaceSyncType.INCREMENTAL;
       return tx.marketplaceSyncRun.create({ data: {
         connectionId: input.connectionId,
-        syncType: input.syncType ?? MarketplaceSyncType.INCREMENTAL,
+        syncType,
         triggerType: input.triggerType ?? MarketplaceSyncTrigger.MANUAL,
         triggeredByUserId: input.triggeredByUserId,
         status: MarketplaceSyncStatus.PENDING,
-        startCursor: marketplaceConnection.syncCursor
+        startCursor: marketplaceConnection.syncCursor,
+        windowStart: input.windowStart,
+        windowEnd: input.windowEnd ?? (syncType === MarketplaceSyncType.INCREMENTAL ? new Date() : undefined)
       }, select: { id: true } });
     });
 

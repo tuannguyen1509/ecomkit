@@ -281,3 +281,11 @@ Missing optional source fields remain absent, while missing/blank order identity
 ## Stage 14C.4B.2A.3b.1 MarketplaceAdapter V2
 
 The provider-neutral adapter contract now supplies sync type, requested window, and opaque committed checkpoint to one provider-owned sync operation. Provider adapters will own their list/detail pagination and return coherent raw/normalized source envelopes plus only a candidate checkpoint. Generic Worker code remains responsible for persistence, stale-update policy, Batch bridging, and committing the candidate checkpoint after all work succeeds. `rawData` and `normalizedData` are persisted separately. ShopeeAdapter remains deferred and is not registered.
+
+## Stage 14C.4B.2A.3b.1A Shopee checkpoint semantics
+
+Shopee durable checkpoint V1 is server-only, versioned opaque JSON: `{ "v": 1, "updatedThrough": <unix-seconds> }`. Generic queue/Worker code stores and passes this value without parsing it. A pagination `next_cursor`, request ID, credential, or provider secret is never a durable checkpoint.
+
+An INITIAL run must provide its explicit requested window and uses `create_time`; its successful candidate checkpoint is `updatedThrough = windowEnd`. An INCREMENTAL run requires a V1 checkpoint, uses `update_time`, and receives one deterministic `windowEnd` persisted when the SyncRun is created. The Shopee resolver computes `timeFrom = updatedThrough - overlap` and `timeTo = persisted windowEnd`; the successful candidate remains `updatedThrough = windowEnd`, including an empty run. Therefore retries of the same SyncRun use the same provider upper bound.
+
+`SHOPEE_INCREMENTAL_OVERLAP_SECONDS` is an Ecomkit reliability policy, not a Shopee platform requirement. It defaults to 300 seconds and accepts only integer values from 0 through 3600. The overlap safely replays boundary updates; generic source uniqueness and provider-update stale protection retain idempotency. ShopeeAdapter remains deferred.

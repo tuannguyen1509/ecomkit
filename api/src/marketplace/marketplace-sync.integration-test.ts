@@ -24,6 +24,7 @@ async function run(): Promise<void> {
     assert.deepEqual(job?.data, { connectionId: connection.id, syncRunId: fulfilled[0].value.syncRunId });
     const runs = await prisma.marketplaceSyncRun.findMany({ where: { connectionId: connection.id } });
     assert.equal(runs.length, 1); assert.equal(runs[0].status, "QUEUED");
+    assert.ok(runs[0].windowEnd, "incremental run must persist its deterministic upper bound");
     await job?.remove();
     await assert.rejects(() => service.requestSync({ connectionId: disabled.id }));
     await assert.rejects(() => service.requestSync({ connectionId: reauth.id }));
