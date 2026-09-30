@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { BatchResultsResponse, MatchingStatus, ResultOrder } from "../../../../types/results";
 import styles from "./results.module.css";
 import { apiBaseUrl, apiFetch } from "../../../../lib/api";
+import { Button, ButtonLink, PageHeader, StatusBadge, TableShell } from "../../../../components/ui/ui";
 
 const statusLabels: Record<MatchingStatus, string> = {
   MATCHED: "Đã đối chiếu",
@@ -94,19 +95,14 @@ export default function BatchResultsPage() {
 
   return (
     <main className={styles.page}>
-      <header className={styles.header}>
-        <p className={styles.brand}>Ecomkit - Vui Khỏe</p>
-        <h1>Kết quả xử lý</h1>
-        <p>Batch <code>{batchId}</code></p>
-        <p><a href={`/batches/${batchId}/errors`}>Xem lỗi & cảnh báo</a></p>
-      </header>
+      <PageHeader eyebrow="Batch detail" title="Kết quả xử lý" description={`Batch ${batchId}`} actions={<ButtonLink href={`/batches/${batchId}/errors`} variant="outline">Xem lỗi & cảnh báo</ButtonLink>}/>
 
       {loading && <section className={styles.state} aria-live="polite">Đang tải kết quả...</section>}
       {!loading && error && (
         <section className={styles.state} role="alert">
           <h2>{error.kind === "not-found" ? "Không tìm thấy Batch." : "Không thể tải kết quả Batch."}</h2>
           <p>{error.kind === "not-found" ? "Kiểm tra lại đường dẫn Batch rồi thử lại." : error.message}</p>
-          {error.kind === "request" && <button type="button" onClick={() => void load()}>Thử lại</button>}
+          {error.kind === "request" && <Button type="button" onClick={() => void load()}>Thử lại</Button>}
         </section>
       )}
       {!loading && !error && data && <Results data={data} currentStatus={currentStatus} group={group} onSetQuery={setQuery} onSetGroup={setGroup} />}
@@ -127,11 +123,11 @@ function Results({ data, currentStatus, group, onSetQuery, onSetGroup }: {
   const canGoNext = data.pagination.page < data.pagination.totalPages;
 
   return <>
-    <section className={styles.filters} aria-label="Xuất kết quả">
+    <section className={`${styles.filters} ${styles.exports}`} aria-label="Xuất kết quả">
       <strong>Xuất kết quả</strong>
-      <a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=xlsx&status=ALL`}>Xuất Excel — tất cả</a>
-      <a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=csv&status=ALL`}>Xuất CSV — tất cả</a>
-      {currentStatus && <><a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=xlsx&status=${currentStatus}`}>Xuất Excel — đang lọc</a><a href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=csv&status=${currentStatus}`}>Xuất CSV — đang lọc</a></>}
+      <ButtonLink external href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=xlsx&status=ALL`}>Xuất XLSX</ButtonLink>
+      <ButtonLink external variant="outline" href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=csv&status=ALL`}>Xuất CSV</ButtonLink>
+      {currentStatus && <><ButtonLink external variant="secondary" href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=xlsx&status=${currentStatus}`}>XLSX đang lọc</ButtonLink><ButtonLink external variant="secondary" href={`${apiBaseUrl}/batches/${data.batch.id}/export?format=csv&status=${currentStatus}`}>CSV đang lọc</ButtonLink></>}
     </section>
     <section className={styles.cards} aria-label="Tóm tắt Batch">
       <Stat label="Tổng file" value={data.summary.totalFiles} />
@@ -174,17 +170,17 @@ function Results({ data, currentStatus, group, onSetQuery, onSetGroup }: {
         </label>
       </section>
 
-      {isFilterEmpty ? <section className={styles.state}><h2>Không có đơn hàng phù hợp với bộ lọc hiện tại.</h2><button type="button" onClick={() => onSetQuery({ status: undefined, group: undefined, page: "1" })}>Xóa bộ lọc</button></section> : <section className={styles.tableWrap} aria-label="Danh sách Master Orders">
+      {isFilterEmpty ? <section className={styles.state}><h2>Không có đơn hàng phù hợp với bộ lọc hiện tại.</h2><button type="button" onClick={() => onSetQuery({ status: undefined, group: undefined, page: "1" })}>Xóa bộ lọc</button></section> : <TableShell className={styles.tableWrap} aria-label="Danh sách Master Orders">
         <table>
           <thead><tr><th>Mã đơn sàn</th><th>Kênh</th><th>Trạng thái đối chiếu</th><th>Nguồn Excel</th><th>Nguồn PDF</th><th>Cảnh báo/Lỗi</th></tr></thead>
           <tbody>{data.orders.map((order) => <tr key={order.id}>
             <td>{formatCode(order)}</td><td>{order.platform === "UNKNOWN" ? "—" : order.platform}</td>
-            <td><span className={`${styles.badge} ${styles[statusGroup[order.matchingStatus]]}`}>{statusLabels[order.matchingStatus]}</span></td>
+            <td><StatusBadge status={statusGroup[order.matchingStatus].toUpperCase()} label={statusLabels[order.matchingStatus]}/></td>
             <td>{sourceIndicator(order, "EXCEL")}</td><td>{sourceIndicator(order, "PDF")}</td>
             <td>{statusGroup[order.matchingStatus] === "success" ? "0 lỗi" : statusGroup[order.matchingStatus] === "warning" ? "1 cảnh báo" : "1 lỗi"}</td>
           </tr>)}</tbody>
         </table>
-      </section>}
+      </TableShell>}
 
       {!isFilterEmpty && <nav className={styles.pagination} aria-label="Phân trang kết quả">
         <span>Trang {data.pagination.page} / {Math.max(data.pagination.totalPages, 1)} · {data.pagination.total} đơn</span>

@@ -7,7 +7,7 @@
     "build": "next build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "node -e \"console.log('web foundation test passed')\""
+    "test": "node tests/ui-foundation.test.mjs"
   },
   "dependencies": {
     "next": "^16.0.0",
