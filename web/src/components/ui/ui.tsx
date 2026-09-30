@@ -1,20 +1,407 @@
 "use client";
-import { useEffect,type ButtonHTMLAttributes,type ReactNode } from "react";
+import { useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
 import Link from "next/link";
 import styles from "./ui.module.css";
-export const cx=(...values:Array<string|false|null|undefined>)=>values.filter(Boolean).join(" ");
-export function Button({variant="primary",loading,children,className,disabled,...props}:ButtonHTMLAttributes<HTMLButtonElement>&{variant?:"primary"|"secondary"|"outline"|"danger"|"ghost";loading?:boolean}){return <button className={cx(styles.button,styles[variant],className)} disabled={disabled||loading} {...props}>{loading&&<span className={styles.spinner} aria-hidden="true"/>}{children}</button>}
-export function ButtonLink({href,variant="primary",children,className,external=false}:{href:string;variant?:"primary"|"secondary"|"outline"|"danger"|"ghost";children:ReactNode;className?:string;external?:boolean}){const classes=cx(styles.button,styles.buttonLink,styles[variant],className);return external?<a className={classes} href={href}>{children}</a>:<Link className={classes} href={href}>{children}</Link>}
-export function AppIcon({name,size=18}:{name:"home"|"process"|"store"|"history"|"users"|"logout"|"upload"|"file"|"check"|"warning"|"download"|"arrow"|"settings";size?:number}){const common={width:size,height:size,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round" as const,strokeLinejoin:"round" as const,"aria-hidden":true};if(name==="home")return <svg {...common}><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg>;if(name==="process")return <svg {...common}><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/><path d="m16 16 2 2 3-4"/></svg>;if(name==="store")return <svg {...common}><path d="M4 10v10h16V10M3 10l2-6h14l2 6"/><path d="M8 20v-6h8v6"/></svg>;if(name==="history")return <svg {...common}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>;if(name==="users")return <svg {...common}><circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2-6 6-6s6 2 6 6M16 5a3 3 0 0 1 0 6M17 14c2.7.3 4 2.2 4 5"/></svg>;if(name==="logout")return <svg {...common}><path d="M10 5H4v14h6M14 8l4 4-4 4M8 12h10"/></svg>;if(name==="upload")return <svg {...common}><path d="M12 16V4m0 0L7 9m5-5 5 5M4 15v5h16v-5"/></svg>;if(name==="file")return <svg {...common}><path d="M6 3h8l4 4v14H6zM14 3v5h5"/></svg>;if(name==="check")return <svg {...common}><path d="m5 12 4 4L19 6"/></svg>;if(name==="warning")return <svg {...common}><path d="M12 3 2 21h20zM12 9v5m0 3h.01"/></svg>;if(name==="download")return <svg {...common}><path d="M12 4v11m0 0 4-4m-4 4-4-4M4 20h16"/></svg>;if(name==="settings")return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2"/></svg>;return <svg {...common}><path d="M5 12h14m-5-5 5 5-5 5"/></svg>}
-export function Card({children,className}:{children:ReactNode;className?:string}){return <section className={cx(styles.card,className)}>{children}</section>}
-export function TableShell({children,className}:{children:ReactNode;className?:string}){return <div className={cx(styles.tableShell,className)}>{children}</div>}
-const badgeTone:Record<string,string>={SUCCESS:"success",ACTIVE:"success",WARNING:"warning",PENDING:"warning",QUEUED:"info",PROCESSING:"info",ERROR:"danger",REVOKED:"danger",SUSPENDED:"danger",NOT_CONFIGURED:"neutral"};
-export function StatusBadge({status,label}:{status:string;label?:string}){return <span className={cx(styles.badge,styles[badgeTone[status]??"neutral"])}>{label??status}</span>}
-export function Alert({children,tone="info"}:{children:ReactNode;tone?:"info"|"success"|"warning"|"danger"}){return <div className={cx(styles.alert,styles[tone])} role={tone==="danger"?"alert":"status"}>{children}</div>}
-export function PageHeader({eyebrow,title,description,actions}:{eyebrow?:string;title:string;description?:string;actions?:ReactNode}){return <header className={styles.pageHeader}><div>{eyebrow&&<p className={styles.eyebrow}>{eyebrow}</p>}<h1>{title}</h1>{description&&<p className={styles.description}>{description}</p>}</div>{actions&&<div className={styles.headerActions}>{actions}</div>}</header>}
-export function SectionHeader({title,description,action}:{title:string;description?:string;action?:ReactNode}){return <div className={styles.sectionHeader}><div><h2>{title}</h2>{description&&<p>{description}</p>}</div>{action}</div>}
-export function StatCard({label,value,hint,icon}:{label:string;value:string|number;hint?:string;icon?:ReactNode}){return <Card className={styles.statCard}><div className={styles.statIcon}>{icon}</div><div><span>{label}</span><strong>{value}</strong>{hint&&<small>{hint}</small>}</div></Card>}
-export function EmptyState({title,description,action}:{title:string;description?:string;action?:ReactNode}){return <div className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true">○</div><h3>{title}</h3>{description&&<p>{description}</p>}{action}</div>}
-export function Skeleton({className}:{className?:string}){return <span className={cx(styles.skeleton,className)} aria-hidden="true"/>}
-export function Field({label,helper,error,children}:{label:string;helper?:string;error?:string;children:ReactNode}){return <label className={styles.field}><span>{label}</span>{children}{error?<small className={styles.fieldError}>{error}</small>:helper?<small>{helper}</small>:null}</label>}
-export function Dialog({open,title,children,actions,onClose}:{open:boolean;title:string;children:ReactNode;actions?:ReactNode;onClose:()=>void}){useEffect(()=>{if(!open)return;const close=(event:KeyboardEvent)=>{if(event.key==="Escape")onClose()};window.addEventListener("keydown",close);return()=>window.removeEventListener("keydown",close)},[open,onClose]);if(!open)return null;return <div className={styles.backdrop} onMouseDown={event=>{if(event.target===event.currentTarget)onClose()}}><section className={styles.dialog} role="dialog" aria-modal="true" aria-labelledby="dialog-title"><header><h2 id="dialog-title">{title}</h2><Button variant="ghost" type="button" onClick={onClose} aria-label="Đóng hộp thoại">×</Button></header><div className={styles.dialogBody}>{children}</div>{actions&&<footer>{actions}</footer>}</section></div>}
+export const cx = (...values: Array<string | false | null | undefined>) =>
+  values.filter(Boolean).join(" ");
+export function Button({
+  variant = "primary",
+  loading,
+  children,
+  className,
+  disabled,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: "primary" | "secondary" | "outline" | "danger" | "ghost";
+  loading?: boolean;
+}) {
+  return (
+    <button
+      className={cx(styles.button, styles[variant], className)}
+      disabled={disabled || loading}
+      {...props}
+    >
+      {loading && <span className={styles.spinner} aria-hidden="true" />}
+      {children}
+    </button>
+  );
+}
+export function ButtonLink({
+  href,
+  variant = "primary",
+  children,
+  className,
+  external = false,
+}: {
+  href: string;
+  variant?: "primary" | "secondary" | "outline" | "danger" | "ghost";
+  children: ReactNode;
+  className?: string;
+  external?: boolean;
+}) {
+  const classes = cx(
+    styles.button,
+    styles.buttonLink,
+    styles[variant],
+    className,
+  );
+  return external ? (
+    <a className={classes} href={href}>
+      {children}
+    </a>
+  ) : (
+    <Link className={classes} href={href}>
+      {children}
+    </Link>
+  );
+}
+export function AppIcon({
+  name,
+  size = 18,
+}: {
+  name:
+    | "home"
+    | "process"
+    | "store"
+    | "history"
+    | "users"
+    | "logout"
+    | "upload"
+    | "file"
+    | "check"
+    | "warning"
+    | "download"
+    | "arrow"
+    | "settings";
+  size?: number;
+}) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+  };
+  if (name === "home")
+    return (
+      <svg {...common}>
+        <path d="m3 11 9-8 9 8" />
+        <path d="M5 10v10h14V10M9 20v-6h6v6" />
+      </svg>
+    );
+  if (name === "process")
+    return (
+      <svg {...common}>
+        <path d="M4 5h16v14H4z" />
+        <path d="M8 9h8M8 13h5" />
+        <path d="m16 16 2 2 3-4" />
+      </svg>
+    );
+  if (name === "store")
+    return (
+      <svg {...common}>
+        <path d="M4 10v10h16V10M3 10l2-6h14l2 6" />
+        <path d="M8 20v-6h8v6" />
+      </svg>
+    );
+  if (name === "history")
+    return (
+      <svg {...common}>
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+        <path d="M3 3v5h5M12 7v5l3 2" />
+      </svg>
+    );
+  if (name === "users")
+    return (
+      <svg {...common}>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20c0-4 2-6 6-6s6 2 6 6M16 5a3 3 0 0 1 0 6M17 14c2.7.3 4 2.2 4 5" />
+      </svg>
+    );
+  if (name === "logout")
+    return (
+      <svg {...common}>
+        <path d="M10 5H4v14h6M14 8l4 4-4 4M8 12h10" />
+      </svg>
+    );
+  if (name === "upload")
+    return (
+      <svg {...common}>
+        <path d="M12 16V4m0 0L7 9m5-5 5 5M4 15v5h16v-5" />
+      </svg>
+    );
+  if (name === "file")
+    return (
+      <svg {...common}>
+        <path d="M6 3h8l4 4v14H6zM14 3v5h5" />
+      </svg>
+    );
+  if (name === "check")
+    return (
+      <svg {...common}>
+        <path d="m5 12 4 4L19 6" />
+      </svg>
+    );
+  if (name === "warning")
+    return (
+      <svg {...common}>
+        <path d="M12 3 2 21h20zM12 9v5m0 3h.01" />
+      </svg>
+    );
+  if (name === "download")
+    return (
+      <svg {...common}>
+        <path d="M12 4v11m0 0 4-4m-4 4-4-4M4 20h16" />
+      </svg>
+    );
+  if (name === "settings")
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M19 5l-2 2M7 17l-2 2" />
+      </svg>
+    );
+  return (
+    <svg {...common}>
+      <path d="M5 12h14m-5-5 5 5-5 5" />
+    </svg>
+  );
+}
+export function Card({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <section className={cx(styles.card, className)}>{children}</section>;
+}
+export function TableShell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cx(styles.tableShell, className)}>{children}</div>;
+}
+const badgeTone: Record<string, string> = {
+  SUCCESS: "success",
+  ACTIVE: "success",
+  WARNING: "warning",
+  PENDING: "warning",
+  QUEUED: "info",
+  PROCESSING: "info",
+  ERROR: "danger",
+  REVOKED: "danger",
+  SUSPENDED: "danger",
+  NOT_CONFIGURED: "neutral",
+};
+export function StatusBadge({
+  status,
+  label,
+}: {
+  status: string;
+  label?: string;
+}) {
+  return (
+    <span className={cx(styles.badge, styles[badgeTone[status] ?? "neutral"])}>
+      {label ?? status}
+    </span>
+  );
+}
+export function Alert({
+  children,
+  title,
+  action,
+  tone = "info",
+}: {
+  children?: ReactNode;
+  title?: string;
+  action?: ReactNode;
+  tone?: "info" | "success" | "warning" | "danger";
+}) {
+  const toneClass = {
+    info: styles.alertInfo,
+    success: styles.alertSuccess,
+    warning: styles.alertWarning,
+    danger: styles.alertDanger,
+  }[tone];
+  return (
+    <div
+      className={cx(styles.alert, toneClass)}
+      role={tone === "danger" ? "alert" : "status"}
+    >
+      <div>
+        {title && <strong>{title}</strong>}
+        {children && <span>{children}</span>}
+      </div>
+      {action && <div className={styles.alertAction}>{action}</div>}
+    </div>
+  );
+}
+export function PageHeader({
+  eyebrow,
+  title,
+  description,
+  actions,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <header className={styles.pageHeader}>
+      <div>
+        {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
+        <h1>{title}</h1>
+        {description && <p className={styles.description}>{description}</p>}
+      </div>
+      {actions && <div className={styles.headerActions}>{actions}</div>}
+    </header>
+  );
+}
+export function SectionHeader({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className={styles.sectionHeader}>
+      <div>
+        <h2>{title}</h2>
+        {description && <p>{description}</p>}
+      </div>
+      {action}
+    </div>
+  );
+}
+export function StatCard({
+  label,
+  value,
+  hint,
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  icon?: ReactNode;
+}) {
+  return (
+    <Card className={styles.statCard}>
+      <div className={styles.statIcon}>{icon}</div>
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+        {hint && <small>{hint}</small>}
+      </div>
+    </Card>
+  );
+}
+export function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className={styles.empty}>
+      <div className={styles.emptyIcon} aria-hidden="true">
+        ○
+      </div>
+      <h3>{title}</h3>
+      {description && <p>{description}</p>}
+      {action}
+    </div>
+  );
+}
+export function Skeleton({ className }: { className?: string }) {
+  return <span className={cx(styles.skeleton, className)} aria-hidden="true" />;
+}
+export function Field({
+  label,
+  helper,
+  error,
+  children,
+}: {
+  label: string;
+  helper?: string;
+  error?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className={styles.field}>
+      <span>{label}</span>
+      {children}
+      {error ? (
+        <small className={styles.fieldError}>{error}</small>
+      ) : helper ? (
+        <small>{helper}</small>
+      ) : null}
+    </label>
+  );
+}
+export function Dialog({
+  open,
+  title,
+  children,
+  actions,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  children: ReactNode;
+  actions?: ReactNode;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [open, onClose]);
+  if (!open) return null;
+  return (
+    <div
+      className={styles.backdrop}
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className={styles.dialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+      >
+        <header>
+          <h2 id="dialog-title">{title}</h2>
+          <Button
+            variant="ghost"
+            type="button"
+            onClick={onClose}
+            aria-label="Đóng hộp thoại"
+          >
+            ×
+          </Button>
+        </header>
+        <div className={styles.dialogBody}>{children}</div>
+        {actions && <footer>{actions}</footer>}
+      </section>
+    </div>
+  );
+}

@@ -21,6 +21,7 @@
     "test:auth": "tsx src/auth/auth.integration-test.ts",
     "test:auth-guards": "tsx src/auth/auth-guards.integration-test.ts",
     "test:admin-users": "tsx src/auth/admin-users.integration-test.ts",
+    "test:branding": "tsx src/settings/branding.integration-test.ts",
     "test:marketplace-core": "tsx src/marketplace/marketplace-core.integration-test.ts",
     "test:marketplace-sync": "tsx src/marketplace/marketplace-sync.integration-test.ts",
     "test:marketplace-redis-outage": "tsx src/marketplace/marketplace-redis-outage.integration-test.ts",

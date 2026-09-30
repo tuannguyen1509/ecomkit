@@ -92,8 +92,22 @@ model User {
   marketplaceSyncRunsTriggered  MarketplaceSyncRun[]    @relation("MarketplaceSyncRunTriggeredBy")
   marketplaceProviderConfigsCreated MarketplaceProviderConfig[] @relation("MarketplaceProviderConfigCreatedBy")
   marketplaceProviderConfigsUpdated MarketplaceProviderConfig[] @relation("MarketplaceProviderConfigUpdatedBy")
+  systemSettingsUpdated             SystemSetting[]              @relation("SystemSettingUpdatedBy")
 
   @@map("users")
+}
+
+model SystemSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @map("updated_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  updatedBy User? @relation("SystemSettingUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([updatedById])
+  @@map("system_settings")
 }
 
 model MarketplaceProviderConfig {

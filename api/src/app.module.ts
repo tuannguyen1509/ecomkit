@@ -8,6 +8,7 @@ import { QueueModule } from "./queue/queue.module.js";
 import { AuthModule } from "./auth/auth.module.js";
 import { Public } from "./auth/auth.decorators.js";
 import { MarketplaceModule } from "./marketplace/marketplace.module.js";
+import { SettingsModule } from "./settings/settings.module.js";
 
 @Controller("health")
 @Public()
@@ -17,13 +18,23 @@ class HealthController {
     return {
       status: "ok",
       service: "ecomkit-api",
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 }
 
 @Module({
-  imports: [AuthModule, BatchesModule, FilesModule, ExcelModule, PdfModule, MatchingModule, QueueModule, MarketplaceModule],
-  controllers: [HealthController]
+  imports: [
+    AuthModule,
+    BatchesModule,
+    FilesModule,
+    ExcelModule,
+    PdfModule,
+    MatchingModule,
+    QueueModule,
+    MarketplaceModule,
+    SettingsModule,
+  ],
+  controllers: [HealthController],
 })
 export class AppModule {}

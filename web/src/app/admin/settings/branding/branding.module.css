@@ -1,0 +1,49 @@
+.page {
+  padding: 2rem clamp(1rem, 3vw, 2.5rem) 3rem;
+  max-width: 980px !important;
+}
+.card {
+  padding: 1.25rem;
+}
+.card form {
+  display: grid;
+  gap: 1rem;
+}
+.preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-muted);
+}
+.preview > div {
+  display: grid;
+}
+.preview span {
+  color: var(--color-text-muted);
+}
+.logo,
+.fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+}
+.logo {
+  object-fit: contain;
+  background: #fff;
+}
+.fallback {
+  display: grid;
+  place-items: center;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 1.55rem;
+  font-weight: 850;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
