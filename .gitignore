@@ -17,6 +17,8 @@ logs/
 *.log
 storage/uploads/*
 !storage/uploads/.gitkeep
+storage/branding/*
+!storage/branding/.gitkeep
 storage/tmp/*
 !storage/tmp/.gitkeep
 tmp/

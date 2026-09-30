@@ -557,3 +557,11 @@ For deterministic provider retries, the generic queue persists an INCREMENTAL Sy
 ## ADMIN-managed provider application configuration
 
 Provider application credentials may be managed by ADMIN through a provider-neutral database model. Secrets are encrypted using the existing marketplace AES-256-GCM envelope. The runtime encryption key remains environment-only. API and Worker resolve configuration through the same server-only contract: enabled database configuration first, then environment fallback. Provider configuration is never placed in browser responses, queues, Redis, sync errors, or exports.
+
+## Stage 14D.1 Lazada architecture verification
+
+Lazada fits the existing MarketplaceAdapter V2 responsibility split without a generic contract or persistence change. A future Lazada provider layer owns Lazada signing, OAuth/token lifecycle, bounded time-window splitting, offset pagination, order/item retrieval, normalization, and its opaque candidate checkpoint. Generic Worker continues to own persistence, stale-update policy, Batch materialization, retry/error lifecycle, and checkpoint commit.
+
+The Phase 1 region is Vietnam. Provider configuration reuses `MarketplaceProviderConfig` for App Key/encrypted App Secret and `MarketplaceConnection` for a region-qualified seller identity and encrypted token envelope. External read-only validation reuses provider-neutral `EXTERNAL_IMPORT` / `EXTERNAL` ownership semantics and imports no refresh token.
+
+Lazada offset is request-local and never a durable checkpoint. The proposed incremental updated-through watermark remains provider-owned and is intentionally not finalized until the official GetOrders update-bound and `updated_at` semantics are captured. See [lazada-integration-plan.md](./lazada-integration-plan.md) for the official-source fact matrix, unresolved provider facts, and implementation gates.
