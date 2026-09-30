@@ -9,3 +9,4 @@ export * from "./shopee-app-config.js";
 export * from "./lazada-signature.js";
 export * from "./lazada-errors.js";
 export * from "./lazada-http-client-core.js";
+export * from "./lazada-oauth-core.js";

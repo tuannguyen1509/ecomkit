@@ -2,7 +2,7 @@
 
 Verification date: **2026-09-30**
 
-Status: **Stage 14D.2 signing and HTTP client foundation complete; OAuth, token lifecycle, order APIs, normalization, and adapter remain unimplemented.**
+Status: **Stage 14D.3A offline OAuth authorization and initial token-acquisition foundation complete; refresh lifecycle, order APIs, normalization, adapter, registry, and live activation remain unimplemented.**
 
 This document uses Lazada Open Platform documentation as the technical authority. Existing n8n, `get-ecom-order`, and other company systems are business references and possible read-only credential/data sources only. They are not API specifications.
 
@@ -279,3 +279,33 @@ The HTTP core:
 - excludes App Secret, access/refresh tokens, authorization-code-like parameters, and signatures from errors and diagnostics.
 
 All transport tests are synthetic and make zero provider requests. The unresolved order/checkpoint facts listed above remain unresolved.
+
+## Stage 14D.3A implementation record
+
+The server-only OAuth core now supports the complete synthetic authorization-code acquisition sequence without enabling a production Lazada route:
+
+```text
+create provider-bound state
+  -> official authorization URL
+  -> validate callback code + state
+  -> atomically consume state
+  -> signed POST /auth/token/create
+  -> strict top-level token-envelope normalization
+  -> exact VN country_user_info selection
+  -> MarketplaceConnection-compatible identity and credential payload
+  -> AES-256-GCM credential envelope
+```
+
+Authorization uses `https://auth.lazada.com/oauth/authorize` with `response_type=code`, optional `force_auth=true`, registered `redirect_uri`, `client_id` equal to App Key, and Ecomkit's mandatory state. State defaults to 600 seconds, is generated from 32 random bytes, bound to platform/user/region/redirect URI, stored under a provider-specific hashed Redis key, and consumed atomically once. The generic Redis state primitive preserves existing Shopee key semantics and rejects cross-provider use.
+
+Token creation reuses the Stage 14D.2 signer and HTTP core at `https://auth.lazada.com/rest/auth/token/create`. It sends the authorization `code` as a signed API parameter with no access token. The OAuth core performs no automatic retry and never calls `/auth/token/refresh`.
+
+The strict parser accepts provider-returned `access_token`, `refresh_token`, integer-positive `expires_in`, integer-positive `refresh_expires_in`, optional `account`, `country`, `account_platform`, and non-empty `country_user_info`. Relative durations are converted with an injected clock into exact ISO access/refresh expiration timestamps; no lifetime is hardcoded.
+
+For the current Vietnam scope, exactly one `country_user_info` entry whose normalized country is `vn` is required. A multi-country response selects that exact entry rather than the first entry. No VN entry fails with `LAZADA_VIETNAM_STORE_REQUIRED`; multiple VN entries fail with `LAZADA_VIETNAM_STORE_AMBIGUOUS`. The connection-compatible identity is now fixed as `vn:<seller_id>`. Account/email is not used as identity.
+
+The resulting credential payload contains access/refresh tokens, their absolute expirations, and non-secret VN seller metadata. App Key and App Secret remain provider-app configuration and are not included in the shop credential. Existing AES-256-GCM envelope code encrypts the payload; safe results expose only presence flags, expiry timestamps, identity metadata, and request ID.
+
+No API controller is production-registered in this stage. This intentionally prevents an externally reachable callback from acquiring credentials before connection persistence/config resolution is implemented. Offline core methods and the Redis-backed state implementation are fully tested. There are zero real Lazada requests, refresh calls, or order calls.
+
+The unresolved Stage 14D.1 order/checkpoint facts remain unchanged.

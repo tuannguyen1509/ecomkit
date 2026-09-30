@@ -18,6 +18,7 @@ export type LazadaResponseEnvelope<T = unknown> = Readonly<{
   request_id?: string;
   data?: T;
   detail?: unknown;
+  [key: string]: unknown;
 }>;
 export type LazadaTransportRequest = Readonly<{
   url: string;
@@ -94,7 +95,7 @@ export class LazadaHttpClientCore {
     private readonly clock: LazadaClock = Date.now
   ) {}
 
-  async request<T = unknown>(input: LazadaLowLevelRequest): Promise<Readonly<{ data: T; requestId?: string }>> {
+  async request<T = unknown, TEnvelope extends LazadaResponseEnvelope<T> = LazadaResponseEnvelope<T>>(input: LazadaLowLevelRequest): Promise<Readonly<{ data: T | undefined; envelope: TEnvelope; requestId?: string }>> {
     this.validateConfig(input);
     const timestamp = lazadaTimestamp(this.clock);
     const signed = createLazadaCommonParameters({
@@ -132,9 +133,9 @@ export class LazadaHttpClientCore {
       });
     }
 
-    let envelope: LazadaResponseEnvelope<T>;
+    let envelope: TEnvelope;
     try {
-      envelope = JSON.parse(response.body) as LazadaResponseEnvelope<T>;
+      envelope = JSON.parse(response.body) as TEnvelope;
     } catch {
       throw new LazadaHttpError({
         provider: "LAZADA",
@@ -168,7 +169,7 @@ export class LazadaHttpClientCore {
         httpStatus: response.status
       });
     }
-    return { data: envelope.data as T, ...(requestId(envelope) ? { requestId: requestId(envelope) } : {}) };
+    return { data: envelope.data, envelope, ...(requestId(envelope) ? { requestId: requestId(envelope) } : {}) };
   }
 
   private validateConfig(input: LazadaLowLevelRequest): void {

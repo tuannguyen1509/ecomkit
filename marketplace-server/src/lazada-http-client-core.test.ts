@@ -78,7 +78,9 @@ async function run(): Promise<void> {
   const successTransport = new CapturingTransport({ status: 200, body: JSON.stringify({ code: "0", request_id: "request-success", data: { ok: true } }) });
   const client = new LazadaHttpClientCore({ appKey, appSecret, timeoutMs: 1000 }, successTransport, () => timestamp);
   const success = await client.request<{ ok: boolean }>({ operation: "SYNTHETIC_ORDER", target: "VIETNAM", apiPath, method: "POST", accessToken, params: { order_id: "1234" }, body, contentType: "application/json" });
-  assert.deepEqual(success, { data: { ok: true }, requestId: "request-success" });
+  assert.deepEqual(success.data, { ok: true });
+  assert.equal(success.requestId, "request-success");
+  assert.equal(success.envelope.code, "0");
   assert.equal(successTransport.requests.length, 1, "no automatic retry");
   const captured = successTransport.requests[0]!;
   const capturedUrl = new URL(captured.url);

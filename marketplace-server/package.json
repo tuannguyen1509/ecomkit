@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx src/lifecycle-contracts.test.ts && tsx src/shopee-credential-lifecycle.test.ts && tsx src/shopee-order-client-core.test.ts && tsx src/shopee-normalizer.test.ts && tsx src/shopee-sync-checkpoint.test.ts && tsx src/shopee-app-config.test.ts && tsx src/lazada-http-client-core.test.ts"
+    "test": "tsx src/lifecycle-contracts.test.ts && tsx src/shopee-credential-lifecycle.test.ts && tsx src/shopee-order-client-core.test.ts && tsx src/shopee-normalizer.test.ts && tsx src/shopee-sync-checkpoint.test.ts && tsx src/shopee-app-config.test.ts && tsx src/lazada-http-client-core.test.ts && tsx src/lazada-oauth-core.test.ts"
   },
   "dependencies": {
     "@ecomkit/shared": "*"
