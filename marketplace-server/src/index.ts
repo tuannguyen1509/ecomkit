@@ -14,3 +14,4 @@ export * from "./lazada-credential-lifecycle.js";
 export * from "./lazada-order-contract.js";
 export * from "./lazada-order-fixtures.js";
 export * from "./lazada-order-client.js";
+export * from "./lazada-normalizer.js";

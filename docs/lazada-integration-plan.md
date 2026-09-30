@@ -416,3 +416,59 @@ Raw order `statuses`, item `status`, timestamps, masked/missing PII, and unknown
 Synthetic tests cover single-page and empty results, both query modes, invalid mixed input, explicit timezone and inclusive boundaries, 230-order pagination, page duplicates, non-progress, offset ceiling, large IDs, repeated units, batches of 50/51, missing groups, malformed responses, safe diagnostics, external-token expiry, and OAuth-owned lifecycle refresh followed by an order request. No real Lazada traffic occurred.
 
 Still deferred: item-status-to-order-`updated_at` behavior, complete status enumeration, app-specific QPS, durable incremental checkpoint semantics, normalizer policy, Adapter, and registry activation.
+
+## Stage 14D.5A normalization policy
+
+`LazadaNormalizer` is a pure server-only mapping from a verified `LazadaRawOrder` plus its complete `LazadaRawOrderItem[]` into the existing `NormalizedMarketplaceOrder`. It has no clock, network, database, Redis, token, persistence, or checkpoint dependency and never mutates provider input.
+
+Identity is exact: `marketplaceOrderId`, `rawOrderCode`, and future `Mã đơn sàn` are `String(order_id)`. Item identity is exact `order_item_id`; unsafe numeric IDs have already been rejected by the contract parser. Every item must belong to the parent `order_id`, and duplicate item IDs fail coherently.
+
+Order status policy:
+
+- provider status values are distinct-deduplicated in first appearance order;
+- exactly one distinct status maps unchanged to `rawProviderStatus`;
+- zero or multiple statuses leave `rawProviderStatus` absent;
+- all distinct statuses remain in `providerMetadata.providerStatuses`;
+- item statuses remain in the compact `providerMetadata.itemStatuses` identity/status list;
+- no fake `MIXED` value or cross-provider translation exists.
+
+Each Lazada order-item object is one purchased unit, so each normalized item has `quantity=1`. Identical SKU/name/price objects remain separate items and are never aggregated. `shop_sku` maps to `sellerSku`, `sku` maps to `platformSku`, `name` maps to `productName`, `variation` maps to `variationName`, and `paid_price` maps directly to `unitPrice`. Optional malformed money fails rather than becoming a misleading zero. Order price, shipping fee, and voucher are preserved as strict decimal strings in provider metadata; no totals, discounts, taxes, or fees are calculated.
+
+Masked PII is preserved exactly in the selected provider metadata subset. Missing PII remains absent. Address objects are preserved individually; no address concatenation, geocoding, or inference occurs. Currency is not assumed from the VN store and remains absent when no order-level currency exists.
+
+`created_at` and `updated_at` are validated and normalized to deterministic ISO timestamps. `providerUpdatedAt` reflects the provider order field only; it is not a durable checkpoint and does not resolve the pending item-status update semantics.
+
+### Lazada 24-column mapping matrix
+
+| Canonical column | Lazada source | Transformation | Nullable | Notes |
+| --- | --- | --- | --- | --- |
+| Ngày Lên Đơn | `order.created_at` | DIRECT | Yes | Provider timestamp |
+| Mã đơn ESHOP | NONE | NULL | Yes | Unsupported |
+| Mã đơn sàn | `order.order_id` | STRING_PRESERVE | No | Exact identity |
+| Kênh Bán Hàng | local platform `LAZADA` | DIRECT | No | Provider constant, not inferred from data |
+| Trạng Thái Đơn Hàng | one distinct `order.statuses` value | DIRECT | Yes | Null for zero/mixed statuses |
+| Tên Khách Hàng | NONE | NULL | Yes | No concatenation of name fields |
+| SĐT | `order.address_shipping.phone` | DIRECT | Yes | Masking preserved |
+| Địa Chỉ | NONE | NULL | Yes | No arbitrary address concatenation |
+| Tỉnh/TP | `order.address_shipping.city` | DIRECT | Yes | Provider value unchanged |
+| Ngày Xuất VAT | NONE | NULL | Yes | Unsupported |
+| Ghi Chú | `order.buyer_note` | DIRECT | Yes | Provider value unchanged |
+| Đã Thu Tiền | NONE | NULL | Yes | No item-price summation |
+| Trạng Thái Công Nợ | NONE | NULL | Yes | Unsupported |
+| Chênh lệch | NONE | NULL | Yes | No calculation |
+| Giá SP (VAT 8%) | NONE | NULL | Yes | No tax reconstruction |
+| % Tổng Chi Phí | NONE | NULL | Yes | No calculation |
+| Tổng Tiền Sẽ Thu | NONE | NULL | Yes | No calculation |
+| Phí Affiliate (Vui Khỏe) | NONE | NULL | Yes | Unsupported |
+| Chiết Khấu (Vui Khỏe) | NONE | NULL | Yes | Unsupported |
+| % Chiết Khấu Vui Khỏe | NONE | NULL | Yes | No calculation |
+| Phí Cố Định (TMĐT) | NONE | NULL | Yes | Unsupported |
+| Phí dịch vụ (TMĐT) | NONE | NULL | Yes | Unsupported |
+| Phí Giao Dịch (TMĐT) | NONE | NULL | Yes | Unsupported |
+| % Chi Phí Sàn TMĐT | NONE | NULL | Yes | No calculation |
+
+The matrix defines source compatibility; the current Adapter/persistence materialization is still absent. Seven columns have direct/identity/platform sources and seventeen intentionally remain null. There are no newly authorized calculations.
+
+Stable safe errors cover invalid order/item identity, parent mismatch, duplicate item, invalid timestamps, and invalid values. Errors expose only code and field path—never raw payload, PII, or secrets. Empty verified item arrays remain empty because the generic normalized contract permits them; no item is fabricated.
+
+Durable incremental checkpoint semantics remain deferred. No Adapter, registry, persistence, Batch, or real Lazada call is part of this stage.
