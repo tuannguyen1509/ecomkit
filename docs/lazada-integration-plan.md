@@ -2,7 +2,7 @@
 
 Verification date: **2026-09-30**
 
-Status: **Stage 14D.3A offline OAuth authorization and initial token-acquisition foundation complete; refresh lifecycle, order APIs, normalization, adapter, registry, and live activation remain unimplemented.**
+Status: **Stage 14D.4A Order API contract closure and synthetic fixture verification complete; network OrderClient, normalization, adapter, registry, and live activation remain unimplemented.**
 
 This document uses Lazada Open Platform documentation as the technical authority. Existing n8n, `get-ecom-order`, and other company systems are business references and possible read-only credential/data sources only. They are not API specifications.
 
@@ -99,11 +99,7 @@ The region qualification is an Ecomkit collision-prevention convention, not a cl
 
 `GetOrders` (`/orders/get`) lists orders for the authorized store. The official order tutorial confirms `created_after`, `status`, `limit`, and `offset`; `status=all` obtains all item-status combinations, `limit` is at most 100, and `offset` is at most 5000. It also links the authoritative API reference for additional parameters.
 
-The current API reference is expected to expose bounded create/update filters (`created_after`, `created_before`, `updated_after`, `updated_before`) and sorting controls, but Stage 14D.1 could not obtain a stable server-rendered parameter table for those additional fields. Consequently:
-
-- `created_after` is VERIFIED.
-- `created_before`, `updated_after`, `updated_before`, `sort_by`, and `sort_direction` are **UNVERIFIED** pending API-console/reference capture.
-- No incremental algorithm may be implemented until both update bounds and their inclusivity/timezone semantics are verified.
+Stage 14D.4A obtained the official structured API-reference payload. The exact update parameter names are `update_after` and `update_before` (not `updated_*`). Both create and update lower/upper bounds, their inclusive “or on” wording, and sorting controls are now verified. Final incremental watermark semantics remain gated only by whether every relevant item-status transition advances order-level `updated_at`.
 
 `order_id` is unique only within the current store. Ecomkit mapping is therefore:
 
@@ -123,11 +119,11 @@ The provider client must detect a window that can exceed the offset ceiling and 
 
 Initial sync will use an explicit bounded create-time window once both boundaries are verified. There is no unbounded history default.
 
-Incremental sync is provisionally designed around an updated-through watermark and deterministic `windowEnd`, with a provider-owned overlap policy. This is **UNRESOLVED** until `updated_after` and `updated_before`, boundary inclusivity, timestamp precision, and ordering are verified officially. Pagination offset is never the checkpoint.
+Incremental sync is provisionally designed around an updated-through watermark and deterministic `windowEnd`, with a provider-owned overlap policy. Inclusive `update_after`/`update_before`, ISO timestamps, and `updated_at` sorting are verified; the durable checkpoint remains **UNRESOLVED** until item-status-to-order-`updated_at` behavior is proven. Pagination offset is never the checkpoint.
 
 ## Order items and status
 
-`GetOrderItems` (`/order/items/get`) obtains items for one order. `GetMultipleOrderItems` (`/orders/items/get`) is currently listed by Lazada as an available order API, but its accepted order-ID count and request/response batching limits are **UNVERIFIED**. Stage 14D.2/OrderClient work must inspect the live official API reference before selecting a batch size.
+`GetOrderItems` (`/order/items/get`) obtains items for one order. `GetMultipleOrderItems` (`/orders/items/get`) is a GET accepting `order_ids` as a comma-separated list in square brackets, with at most 50 IDs. Its response groups `order_items` under each `order_id`.
 
 Lazada models each purchased unit as a separate order-item object with a unique `order_item_id`; buying two identical units can produce two item objects rather than one object with quantity two. A future normalizer must preserve provider item identity and may aggregate only if the canonical Ecomkit contract explicitly requires it and no information is lost.
 
@@ -229,12 +225,12 @@ Live completion requires equal counts and empty missing/extra sets. There is no 
 | GetOrders | Order tutorial/API reference | YES | `/orders/get` |
 | GetOrder | Order tutorial/API reference | YES | `/order/get` by `order_id` |
 | GetOrderItems | Order tutorial/API reference | YES | `/order/items/get` |
-| GetMultipleOrderItems | Order tutorial/API listing | PARTIAL | `/orders/items/get` exists; batch limit unverified |
+| GetMultipleOrderItems | API reference | YES | GET `/orders/items/get`; bracketed comma-separated `order_ids`; maximum 50 |
 | Limit | Order tutorial | YES | Maximum 100 orders/page |
 | Offset | Order tutorial | YES | Offset pagination |
 | Offset maximum | Order tutorial | YES | Maximum 5000; split windows or fail, never truncate |
-| Created filters | Order tutorial/API reference | PARTIAL | `created_after` verified; upper bound semantics unverified |
-| Updated filters | API reference not stably rendered | NO | Incremental strategy remains gated/unresolved |
+| Created filters | GetOrders API reference | YES | Inclusive `created_after`/`created_before`; ISO 8601 with offset |
+| Updated filters | GetOrders API reference | PARTIAL | Inclusive `update_after`/`update_before` verified; item-status update semantics remain unresolved |
 | Status | Order tutorial | YES | Request supports `status`; order status is derived from item-status collection |
 | Order ID | Order tutorial | YES | `order_id`, unique only in current store |
 | Order item ID | Order tutorial | YES | Unique `order_item_id` per returned unit object |
@@ -321,3 +317,84 @@ Lazada refresh does not reset the original refresh-token lifetime. The persisted
 `EXTERNAL_IMPORT`/`EXTERNAL` credentials never lock or refresh; expiry returns `EXTERNAL_ACCESS_TOKEN_EXPIRED`. Provider/network, malformed-response, encryption, and persistence failures never partially replace credentials. Provider-success followed by a local write failure is not reported as success or automatically retried with the old rotating token; recovery may require reauthorization.
 
 All tests use synthetic credentials and transports. There are no Order API calls, real traffic, adapter/registry activation, or Prisma changes. Stage 14D.1 order/checkpoint uncertainties remain unresolved.
+
+## Stage 14D.4A Order API contract closure
+
+Verification used the official API-reference pages linked above and their official structured reference payloads (verified 2026-09-30). No provider request or credential was used.
+
+### Verified GetOrders request contract
+
+`GET /orders/get` accepts these optional business parameters:
+
+| Parameter | Official type | Verified semantics |
+| --- | --- | --- |
+| `created_after` | String | ISO 8601; created after **or on** the timestamp. Either `created_after` or `update_after` is mandatory. |
+| `created_before` | String | ISO 8601; before **or on** the timestamp. The official description says “updated” despite the create-prefixed parameter, so its field selection wording remains a documentation defect. |
+| `update_after` | String | ISO 8601; updated after **or on** the timestamp. Either this or `created_after` is mandatory. |
+| `update_before` | String | ISO 8601; updated before **or on** the timestamp. |
+| `status` | String | Optional item-status filter. `all` is documented by the tutorial. The API-reference and error tables expose non-identical status lists, so the complete current enumeration remains console/provider-dependent. |
+| `limit` | Number | Optional; maximum 100. |
+| `offset` | Number | Optional number of records skipped; tutorial maximum 5000. |
+| `sort_by` | String | `created_at` or `updated_at`. |
+| `sort_direction` | String | `ASC` or `DESC`. |
+
+The official request examples send all four time bounds together, proving the parameters can coexist syntactically. They do not document precedence when create and update filters are mixed; Ecomkit must use one time-field pair per sync mode. Error `17` documents `YYYY-MM-DDTHH:mm:ss±HH:MM`; explicit offsets are required. GetOrders returns `data.orders`, page `count`, and optional `countTotal` for the complete filter set. Official examples encode both counts as strings despite reference type `Number`; contract parsing safely accepts either non-negative integer representation.
+
+Both lower and upper filters are documented as inclusive (“or on”). A future window splitter must exact-deduplicate boundary `order_id` values. Offset remains request-local and is never a checkpoint. More than 5000 matches requires deterministic time splitting; if a sub-window still exceeds the ceiling and cannot be split without ambiguity, the client must fail coherently rather than truncate.
+
+### Order and item contracts
+
+- `GET /order/get` requires `order_id`. The reference declares Number while its official JSON example encodes a string. The response is an order object closely matching a GetOrders entry.
+- `GET /order/items/get` requires `order_id` and returns an array of order-item objects.
+- `GET /orders/items/get` requires `order_ids`: a comma-separated list of identifiers in square brackets, no more than 50. It is GET and returns groups containing `order_id`, `order_number`, and `order_items`.
+- `order_item_id` is the provider item identity. The reference declares Number but official JSON examples use strings.
+- No quantity field appears in the official item contract. Each purchased unit is represented by its own item object and identity; contract parsing never aggregates repeated SKUs.
+
+Official order fields include `order_id`, `order_number`, `created_at`, `updated_at`, `statuses`, `items_count`, `price`, `voucher`, `shipping_fee`, `payment_method`, `address_shipping`, and `address_billing`. `statuses` is the unique collection of contained item statuses, not one authoritative order status. Official item fields include `order_item_id`, `order_id`, `sku`, `shop_sku`, `name`, `item_price`, `paid_price`, `shipping_amount`, `voucher_amount`, `tax_amount`, `status`, `created_at`, `updated_at`, `package_id`, `tracking_code`, and `currency`.
+
+The official response describes `updated_at` as the date/time of the last change to the order. It does not explicitly prove that every item-status transition updates order-level `updated_at`. Consequently it is a strong `providerUpdatedAt` candidate, but final incremental watermark semantics remain pending fixture/live evidence.
+
+### Fixture and parser policy
+
+`lazada-order-fixtures.ts` contains sanitized official-shaped list, detail, one-order-items, and multi-order-items fixtures. Edge cases include mixed statuses, masked and missing address data, two identical SKUs with distinct item IDs, and provider IDs above JavaScript's safe-integer limit. No fixture contains real PII.
+
+`lazada-order-contract.ts` provides pure parsers only—no HTTP methods. Mandatory identity/timestamp/status structures are validated, documented optional fields may be absent, and unknown provider fields remain on raw records. Provider IDs normalize to strings. Numeric IDs are accepted only when already safe integers; unsafe numbers are rejected so precision loss cannot be hidden.
+
+### Readiness and remaining gates
+
+| Capability | Status | Reason |
+| --- | --- | --- |
+| GetOrders request/list parsing | READY | Bounds, sorting, pagination and list envelope verified |
+| GetOrder | READY | Request and official-shaped response verified |
+| GetOrderItems | READY | Request and item-array response verified |
+| GetMultipleOrderItems | READY | GET request shape, grouped response, and maximum 50 verified |
+| Initial sync | READY with defensive splitting | Inclusive create bounds verified; exact boundary dedup required |
+| Incremental sync | PARTIAL | Update bounds verified, but item-status-to-order-`updated_at` semantics still unproven |
+| Normalizer | PARTIAL | Raw fields are modeled; mixed-status normalization policy still requires explicit design |
+| MarketplaceAdapter V2 | FIT | No generic contract change is required; provider checkpoint remains opaque |
+
+Remaining unverified facts are app-specific QPS/rate limits, complete current status enumeration, and whether every relevant item-status transition advances order-level `updated_at`. These do not block a list/detail/items OrderClient restricted to verified behavior, but they block final incremental checkpoint semantics.
+
+### Updated Order API fact matrix
+
+| Fact | Official source | Status | Fixture | Implementation impact |
+| --- | --- | --- | --- | --- |
+| `created_after` / `created_before` | GetOrders reference | VERIFIED, inclusive | GetOrders | Bounded initial windows possible |
+| `update_after` / `update_before` | GetOrders reference | VERIFIED, inclusive | GetOrders | Incremental retrieval parameters exist |
+| Time format/timezone | GetOrders error 17 | VERIFIED | Offset-bearing ISO timestamps | Require explicit ISO 8601 offset |
+| Mixed create/update precedence | GetOrders examples only | UNVERIFIED | None | Use only one filter pair per mode |
+| Status | Tutorial/reference/error table | PARTIAL | Mixed statuses | `all` verified; full enum not frozen |
+| Limit/offset/offset max | Reference/tutorial | VERIFIED: 100/offset/5000 | Constants | Split windows; never truncate |
+| Sort | GetOrders reference | VERIFIED | Contract type | `created_at`/`updated_at`, ASC/DESC |
+| `count`/`countTotal` | GetOrders response | VERIFIED | String-form counts | Page vs full-filter completion |
+| `order_id` and scope | Order reference/tutorial | VERIFIED, store-scoped | Large string ID | Connection + string ID identity |
+| `order_number` | Order reference | VERIFIED as same order identifier | Fixtures | `rawOrderCode` remains `String(order_id)` |
+| `updated_at` | Order response | PARTIAL semantics | Fixtures | Candidate provider timestamp only |
+| `statuses` | Order response | VERIFIED collection | Mixed fixture | No arbitrary single status |
+| GetOrder | API reference | VERIFIED | Detail fixture | Safe detail capability |
+| GetOrderItems | API reference | VERIFIED | Two-unit fixture | One request per order available |
+| GetMultipleOrderItems | API reference | VERIFIED, max 50 | Group fixture | Preferred bounded item batching |
+| `order_item_id` | Item response | VERIFIED | Large string IDs | Preserve exact item identity |
+| Quantity | Item response/tutorial | VERIFIED per-unit objects; no quantity field | Repeated SKU fixture | No implicit aggregation |
+| Masked PII | Sensitive-data docs/order response | VERIFIED | Masked/missing fixtures | Preserve absence/masking; infer nothing |
+| Request ID | All response examples | VERIFIED | All fixtures | Preserve safe diagnostics |
