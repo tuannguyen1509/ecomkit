@@ -4,6 +4,7 @@ const env={SHOPEE_ENV:"sandbox",SHOPEE_PARTNER_ID:"ENV_ID",SHOPEE_PARTNER_KEY:"E
 let stored:StoredShopeeAppConfig|null=null;const resolver=new ShopeeAppConfigResolver({findShopee:async()=>stored},{decryptPartnerSecret:(value)=>value==="ENVELOPE"?"DB_SECRET":(()=>{throw new Error()})()},env);
 assert.equal((await resolver.resolve()).source,"environment");
 stored={environment:"production",partnerId:"DB_ID",partnerSecretEnvelope:"ENVELOPE",redirectUri:"https://example.test/callback",isEnabled:true};let value=await resolver.resolve({requireRedirect:true});assert.equal(value.source,"database");assert.equal(value.partnerId,"DB_ID");assert.equal(value.partnerKey,"DB_SECRET");
+stored={...stored,redirectUri:""};value=await resolver.resolve();assert.equal(value.redirectUri,undefined);await assert.rejects(()=>resolver.resolve({requireRedirect:true}),(error:unknown)=>error instanceof ShopeeAppConfigError&&error.code==="SHOPEE_REDIRECT_URI_INVALID");
 stored={...stored,isEnabled:false};assert.equal((await resolver.resolve()).source,"environment");
 stored={...stored,isEnabled:true,partnerSecretEnvelope:"BAD"};await assert.rejects(()=>resolver.resolve(),(error:unknown)=>error instanceof ShopeeAppConfigError&&error.code==="SHOPEE_CONFIG_DECRYPT_FAILED");
 console.log("Shopee app configuration resolver tests passed");

@@ -22,7 +22,9 @@ export class ShopeeAppConfigResolver {
       if (stored.environment !== "sandbox" && stored.environment !== "production" || !stored.partnerId.trim()) throw new ShopeeAppConfigError("SHOPEE_CONFIG_INVALID");
       let partnerKey: string; try { partnerKey = this.crypto.decryptPartnerSecret(stored.partnerSecretEnvelope); } catch { throw new ShopeeAppConfigError("SHOPEE_CONFIG_DECRYPT_FAILED"); }
       if (!partnerKey) throw new ShopeeAppConfigError("SHOPEE_CONFIG_DECRYPT_FAILED");
-      return { environment: stored.environment as ShopeeEnvironment, partnerId: stored.partnerId, partnerKey, timeoutMs: Number(this.env.SHOPEE_HTTP_TIMEOUT_MS ?? "30000"), redirectUri: redirect(stored.redirectUri), source: "database" };
+      const redirectUri = stored.redirectUri.trim();
+      if (options.requireRedirect && !redirectUri) throw new ShopeeAppConfigError("SHOPEE_REDIRECT_URI_INVALID");
+      return { environment: stored.environment as ShopeeEnvironment, partnerId: stored.partnerId, partnerKey, timeoutMs: Number(this.env.SHOPEE_HTTP_TIMEOUT_MS ?? "30000"), ...(redirectUri ? { redirectUri: redirect(redirectUri) } : {}), source: "database" };
     }
     const runtime = loadShopeeRuntimeConfig(this.env); const redirectUri = this.env.SHOPEE_REDIRECT_URI?.trim();
     if (options.requireRedirect && !redirectUri) throw new ShopeeAppConfigError("SHOPEE_REDIRECT_URI_INVALID");

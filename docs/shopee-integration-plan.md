@@ -329,3 +329,13 @@ ADMIN may import only Shop ID, access token, and access-token expiry. The token 
 The Marketplace UI separates local **Kiểm tra cấu hình** from rate-limited **Test Shopee API**, which performs one explicitly bounded read-only Order List page. Safe status exposes ownership and expiry metadata, never the token. Exact legacy comparison is case-sensitive by `order_sn` using [the comparison record](shopee-legacy-comparison.md).
 
 Live validation remains `VALIDATION_PENDING`: the canonical runtime has no imported token/server encryption key and no exact-window legacy `order_sn` artifact was supplied. No real Shopee or legacy-system request occurred. Lazada/TikTok must not start until `SHOPEE_LEGACY_DATA_MATCH=PASS`.
+## Stage 14C.6B.1 — external read-only validation without OAuth
+
+Shopee now exposes two operationally separate connection modes:
+
+- `OAUTH_MANAGED` keeps the existing redirect URI, OAuth state, callback, token exchange, and Ecomkit-owned refresh lifecycle.
+- `EXTERNAL_IMPORT_READ_ONLY` requires only environment, Partner ID, encrypted Partner Key, Shop ID, encrypted access token, and access-token expiry. It does not require a redirect URI, public domain, OAuth callback, or refresh token.
+
+External imports force `credentialSource=EXTERNAL_IMPORT` and `refreshOwnership=EXTERNAL`. The shared lifecycle rejects expired or near-expired external credentials without entering the refresh lock or calling the refresh provider. The local structural test validates decryption, expiry, endpoint resolution, signing, and API/Worker resolver parity without provider traffic. The separate live-test action performs at most one manually requested, narrow-window Get Order List call; it does not poll, refresh, revoke, or start OAuth.
+
+Shopee live comparison remains `VALIDATION_PENDING`. Lazada and TikTok remain blocked until `SHOPEE_LEGACY_DATA_MATCH=PASS`.

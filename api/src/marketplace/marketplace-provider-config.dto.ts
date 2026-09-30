@@ -5,7 +5,7 @@ export class UpdateShopeeProviderConfigDto {
   environment!: "sandbox" | "production";
   @IsString() @IsNotEmpty() @MaxLength(200)
   partnerId!: string;
-  @IsOptional() @IsString() @MaxLength(4096)
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(4096)
   partnerKey?: string;
   @IsUrl({ require_protocol: true, protocols: ["http", "https"], require_tld: false }) @MaxLength(2048)
   redirectUri!: string;
@@ -14,12 +14,23 @@ export class UpdateShopeeProviderConfigDto {
 }
 
 export class ImportShopeeExternalTokenDto {
+  @IsIn(["sandbox", "production"])
+  environment!: "sandbox" | "production";
+  @IsString() @IsNotEmpty() @MaxLength(200)
+  partnerId!: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(4096)
+  partnerKey?: string;
   @IsString() @IsNotEmpty() @MaxLength(100)
   shopId!: string;
   @IsString() @IsNotEmpty() @MaxLength(8192)
   accessToken!: string;
   @IsDateString()
   accessTokenExpiresAt!: string;
+}
+
+export class TestShopeeExternalConfigDto {
+  @IsString() @IsNotEmpty()
+  connectionId!: string;
 }
 
 export class TestShopeeLiveReadDto {

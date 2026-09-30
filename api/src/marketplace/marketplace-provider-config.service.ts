@@ -47,14 +47,40 @@ export class MarketplaceProviderConfigService {
     return { config: await this.getShopee(), encryptionReady: this.encryptionReady(), connections };
   }
   async importExternalToken(userId: string, input: ImportShopeeExternalTokenDto) {
-    await this.resolveRuntime();
     const expiresAt = new Date(input.accessTokenExpiresAt);
     if (!Number.isFinite(expiresAt.valueOf()) || expiresAt.valueOf() <= Date.now()) throw new BadRequestException({ errorCode: "EXTERNAL_ACCESS_TOKEN_EXPIRED", message: "The imported access token is expired." });
-    let envelope: string;
-    try { envelope = this.credentials.encryptCredential({ accessToken: input.accessToken, tokenExpiresAt: expiresAt.toISOString(), providerMetadata: { shopId: input.shopId.trim(), credentialSource: "EXTERNAL_IMPORT", refreshOwnership: "EXTERNAL", accessTokenExpiresAt: expiresAt.toISOString(), liveApiStatus: "NOT_TESTED" } }); }
+    const existing = await prisma.marketplaceProviderConfig.findUnique({ where: { platform: Platform.SHOPEE }, select: { partnerSecretEnvelope: true, redirectUri: true } });
+    if (!existing && !input.partnerKey?.trim()) throw new BadRequestException({ errorCode: "SHOPEE_PARTNER_KEY_REQUIRED", message: "Partner Key is required for initial external configuration." });
+    let partnerSecretEnvelope = existing?.partnerSecretEnvelope;
+    let credentialEnvelope: string;
+    try {
+      if (input.partnerKey?.trim()) partnerSecretEnvelope = this.credentials.encryptCredential({ providerMetadata: { partnerSecret: input.partnerKey } });
+      credentialEnvelope = this.credentials.encryptCredential({ accessToken: input.accessToken, tokenExpiresAt: expiresAt.toISOString(), providerMetadata: { shopId: input.shopId.trim(), credentialSource: "EXTERNAL_IMPORT", refreshOwnership: "EXTERNAL", accessTokenExpiresAt: expiresAt.toISOString(), liveApiStatus: "NOT_TESTED" } });
+    }
     catch { throw new ConflictException({ errorCode: "MARKETPLACE_ENCRYPTION_KEY_NOT_CONFIGURED", message: "Server encryption key is not configured." }); }
-    const row = await prisma.marketplaceConnection.upsert({ where: { platform_externalShopId: { platform: Platform.SHOPEE, externalShopId: input.shopId.trim() } }, create: { platform: Platform.SHOPEE, externalShopId: input.shopId.trim(), status: MarketplaceConnectionStatus.ACTIVE, credentialEnvelope: envelope, createdByUserId: userId }, update: { status: MarketplaceConnectionStatus.ACTIVE, credentialEnvelope: envelope }, select: { id: true, externalShopId: true, status: true, updatedAt: true } });
+    const row = await prisma.$transaction(async (tx) => {
+      await tx.marketplaceProviderConfig.upsert({ where: { platform: Platform.SHOPEE }, create: { platform: Platform.SHOPEE, environment: input.environment, partnerId: input.partnerId.trim(), partnerSecretEnvelope: partnerSecretEnvelope!, redirectUri: "", isEnabled: true, createdById: userId, updatedById: userId }, update: { environment: input.environment, partnerId: input.partnerId.trim(), partnerSecretEnvelope: partnerSecretEnvelope!, updatedById: userId } });
+      return tx.marketplaceConnection.upsert({ where: { platform_externalShopId: { platform: Platform.SHOPEE, externalShopId: input.shopId.trim() } }, create: { platform: Platform.SHOPEE, externalShopId: input.shopId.trim(), status: MarketplaceConnectionStatus.ACTIVE, credentialEnvelope, createdByUserId: userId }, update: { status: MarketplaceConnectionStatus.ACTIVE, credentialEnvelope }, select: { id: true, externalShopId: true, status: true, updatedAt: true } });
+    });
     return { ...row, credentialSource: "EXTERNAL_IMPORT", refreshOwnership: "EXTERNAL", accessTokenConfigured: true, accessTokenExpiresAt: expiresAt.toISOString() };
+  }
+  async testExternalReadOnly(connectionId: string): Promise<Record<string, unknown>> {
+    try {
+      const config = await this.resolveRuntime(false);
+      const row = await prisma.marketplaceConnection.findUnique({ where: { id: connectionId }, select: { platform: true, externalShopId: true, credentialEnvelope: true } });
+      if (!row || row.platform !== Platform.SHOPEE || !row.credentialEnvelope) throw new Error("missing external credential");
+      const credential = this.credentials.decryptCredential(row.credentialEnvelope); const metadata = credential.providerMetadata ?? {};
+      if (metadata.credentialSource !== "EXTERNAL_IMPORT" || metadata.refreshOwnership !== "EXTERNAL" || !credential.accessToken) throw new Error("invalid external credential");
+      const expiresAt = new Date(String(metadata.accessTokenExpiresAt ?? credential.tokenExpiresAt ?? ""));
+      if (!Number.isFinite(expiresAt.valueOf()) || expiresAt.valueOf() <= Date.now()) throw new BadRequestException({ errorCode: "EXTERNAL_ACCESS_TOKEN_EXPIRED", message: "The imported access token is expired." });
+      const signature = new ShopeeSigner(config.partnerId, config.partnerKey).signShop("/api/v2/order/get_order_list", 1_700_000_000, credential.accessToken, row.externalShopId);
+      if (!/^[a-f0-9]{64}$/.test(signature) || !getShopeeBaseUrl(config.environment)) throw new Error("invalid external config");
+      return { status: "PASS", code: "SHOPEE_EXTERNAL_CONFIG_READY", mode: "EXTERNAL_IMPORT_READ_ONLY", checks: { environment: true, partnerId: true, partnerKeyEncrypted: true, shopId: true, accessTokenEncrypted: true, accessTokenExpiry: true, signing: true, endpointResolution: true, apiWorkerParity: true, redirectUriRequired: false, oauthRequired: false, refreshTokenRequired: false }, liveProviderTested: false };
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      const code = error instanceof ShopeeAppConfigError ? error.code : error instanceof MarketplaceCredentialCryptoError ? "SHOPEE_CONFIG_DECRYPT_FAILED" : "SHOPEE_EXTERNAL_CONFIG_INVALID";
+      throw new BadRequestException({ errorCode: code, message: "Shopee external read-only configuration validation failed." });
+    }
   }
   async recordLiveTest(connectionId: string, status: "PASS" | "FAIL") {
     const row = await prisma.marketplaceConnection.findUnique({ where: { id: connectionId }, select: { credentialEnvelope: true } });
