@@ -2,7 +2,7 @@
 
 Verification date: **2026-09-30**
 
-Status: **Stage 14D.1 requirements and architecture verification complete; no Lazada code exists yet.**
+Status: **Stage 14D.2 signing and HTTP client foundation complete; OAuth, token lifecycle, order APIs, normalization, and adapter remain unimplemented.**
 
 This document uses Lazada Open Platform documentation as the technical authority. Existing n8n, `get-ecom-order`, and other company systems are business references and possible read-only credential/data sources only. They are not API specifications.
 
@@ -253,3 +253,29 @@ Stage 14D.2 may implement only the signer and generic HTTP/error foundation usin
 - app-specific rate-limit/permission behavior in the Lazada console.
 
 These are provider-detail verification gates, not a MarketplaceAdapter V2 blocker.
+
+## Stage 14D.2 implementation record
+
+The server-only `marketplace-server` workspace now exports a pure Lazada signer and a low-level HTTP client foundation. It does not load database configuration, persist tokens, implement OAuth, call an order endpoint, or register a Lazada adapter.
+
+The signer:
+
+- excludes an existing `sign` parameter and does not mutate caller input;
+- omits undefined and empty-string values consistently with the official sample implementation;
+- ASCII-orders parameter names, prefixes the API path, and appends an optional raw request-body string;
+- applies HMAC-SHA256 with the App Secret and emits 64-character uppercase hexadecimal;
+- emits common `app_key`, Unix-millisecond `timestamp`, `sign_method=sha256`, optional `access_token`, and the calculated `sign`;
+- passes the complete official `/order/get` signing vector from Lazada documentation.
+
+The HTTP core:
+
+- keeps token (`https://auth.lazada.com/rest`) and Vietnam seller (`https://api.lazada.vn/rest`) targets distinct;
+- accepts only GET/POST, explicit server-side credentials, an injectable clock, and an injectable transport;
+- transmits the same API path, normalized parameters, and raw body string used by the signer;
+- treats only provider code `0` (numeric or string) with HTTP 2xx as success;
+- preserves safe provider code, sanitized provider message, request ID, HTTP status, operation, and API path;
+- classifies timeout, network, and HTTP 5xx failures as retryable while provider auth/permission/parameter failures default to non-retryable;
+- performs no internal retry and adds no rate-limit/QPS assumptions;
+- excludes App Secret, access/refresh tokens, authorization-code-like parameters, and signatures from errors and diagnostics.
+
+All transport tests are synthetic and make zero provider requests. The unresolved order/checkpoint facts listed above remain unresolved.
