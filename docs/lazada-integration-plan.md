@@ -398,3 +398,21 @@ Remaining unverified facts are app-specific QPS/rate limits, complete current st
 | Quantity | Item response/tutorial | VERIFIED per-unit objects; no quantity field | Repeated SKU fixture | No implicit aggregation |
 | Masked PII | Sensitive-data docs/order response | VERIFIED | Masked/missing fixtures | Preserve absence/masking; infer nothing |
 | Request ID | All response examples | VERIFIED | All fixtures | Preserve safe diagnostics |
+
+## Stage 14D.4B OrderClient foundation
+
+The server-only workspace now exports `LazadaOrderClient`. It composes the existing Lazada credential lifecycle, signed HTTP core, and Stage 14D.4A response parsers. Callers provide only a connection ID and verified query inputs; App Secret and access/refresh tokens are never part of the public OrderClient input or result.
+
+Supported offline-tested operations are `listOrders`, `listAllOrdersInWindow`, `getOrder`, `getOrderItems`, and `getMultipleOrderItems`. The multiple-items operation uses bracketed comma-separated IDs, maximum 50, and preserves provider grouping.
+
+List input has an explicit `CREATE_TIME` or `UPDATE_TIME` mode. Create mode sends only `created_after`/`created_before`; update mode sends only `update_after`/`update_before`. Timestamps must contain an explicit `Z` or numeric offset and are transmitted unchanged. This update-mode request capability does not define or authorize a durable incremental checkpoint.
+
+Page size defaults to 100 and is restricted to 1–100. Offset is restricted to 0–5000. Collection advances deterministically by page limit, uses `countTotal` where present, and performs no hidden retries. Exact `order_id` duplicates preserve the first raw snapshot and are exposed through `duplicateOrderIds`; conflicting snapshots are not merged or silently selected as newer. A page that adds no new identity while more results are expected fails with `LAZADA_PAGINATION_NON_PROGRESS`. A required offset above 5000 fails with `LAZADA_WINDOW_TOO_LARGE`; there is no silent truncation and no cross-window splitting in the client.
+
+Order and item IDs remain exact strings. Multiple-item inputs are deduplicated in first-input order; missing response groups are not fabricated, and requested IDs remain exposed for higher-layer completeness checks.
+
+Raw order `statuses`, item `status`, timestamps, masked/missing PII, and unknown fields remain provider data. The client performs no normalization, status selection, quantity aggregation, persistence, candidate-checkpoint generation, automatic retry, or rate-limit guessing.
+
+Synthetic tests cover single-page and empty results, both query modes, invalid mixed input, explicit timezone and inclusive boundaries, 230-order pagination, page duplicates, non-progress, offset ceiling, large IDs, repeated units, batches of 50/51, missing groups, malformed responses, safe diagnostics, external-token expiry, and OAuth-owned lifecycle refresh followed by an order request. No real Lazada traffic occurred.
+
+Still deferred: item-status-to-order-`updated_at` behavior, complete status enumeration, app-specific QPS, durable incremental checkpoint semantics, normalizer policy, Adapter, and registry activation.
