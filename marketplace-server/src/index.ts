@@ -15,3 +15,4 @@ export * from "./lazada-order-contract.js";
 export * from "./lazada-order-fixtures.js";
 export * from "./lazada-order-client.js";
 export * from "./lazada-normalizer.js";
+export * from "./lazada-marketplace-adapter.js";

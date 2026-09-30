@@ -472,3 +472,19 @@ The matrix defines source compatibility; the current Adapter/persistence materia
 Stable safe errors cover invalid order/item identity, parent mismatch, duplicate item, invalid timestamps, and invalid values. Errors expose only code and field path—never raw payload, PII, or secrets. Empty verified item arrays remain empty because the generic normalized contract permits them; no item is fabricated.
 
 Durable incremental checkpoint semantics remain deferred. No Adapter, registry, persistence, Batch, or real Lazada call is part of this stage.
+
+## Stage 14D.5B INITIAL-only MarketplaceAdapter
+
+`LazadaMarketplaceAdapter` implements the existing MarketplaceAdapter V2 contract without changing it. Because `candidateCheckpoint` is optional, Lazada INITIAL results deliberately omit it. `INCREMENTAL` is rejected locally with `LAZADA_INCREMENTAL_NOT_READY` before OrderClient or credential-lifecycle access.
+
+INITIAL requires explicit valid `windowStart` and `windowEnd` and always queries `CREATE_TIME`. Page traversal remains in `LazadaOrderClient.listAllOrdersInWindow`. Only `LAZADA_WINDOW_TOO_LARGE` triggers deterministic earlier-first splitting. Splits use whole-second midpoint resolution, overlap at the inclusive midpoint, are bounded to 32 levels, and fail with `LAZADA_WINDOW_UNSPLITTABLE` when no smaller safe interval exists. There is no truncation, provider retry, default history window, durable offset, or checkpoint.
+
+Orders deduplicate only by exact `String(order_id)`. Identical boundary snapshots collapse to one. Conflicting snapshots use the later valid provider `updated_at`, consistent with generic stale-material handling; equal or invalid timestamps with different snapshots fail with `LAZADA_DUPLICATE_ORDER_CONFLICT`. This local snapshot policy does not approve `updated_at` as an incremental watermark.
+
+GetOrders contains the raw order fields required by `LazadaNormalizer`, so no additional GetOrder calls are made. After the final unique order set, GetMultipleOrderItems runs sequentially in groups of at most 50. Missing, unexpected, or duplicate groups fail the complete run. No empty item data is fabricated and there is no N+1 fallback.
+
+Each envelope uses exact order identity for `marketplaceOrderId` and `rawOrderCode`. `rawData` is `{ order, items }` containing cloned, unmodified provider objects; `normalizedData` is exactly the LazadaNormalizer result; and `providerUpdatedAt` is the parsed provider order field. The adapter adds no status, item, quantity, PII, or money transformation.
+
+Synthetic coverage includes empty/basic results, pagination through OrderClient, 50/50/20 item batching, mixed statuses, repeated units, large IDs, deterministic and multi-level splitting, inclusive midpoint deduplication, unsplittable windows, strict group completeness, item/order mismatch, duplicate items, normalization failure, raw immutability, duplicate conflict policy, lifecycle-error propagation, and immediate INCREMENTAL rejection. No production registry, Worker factory, persistence, marketplace-sync job, Prisma change, or real Lazada traffic was added.
+
+Durable incremental behavior remains deferred until item-status-to-order-`updated_at` semantics are proven.
