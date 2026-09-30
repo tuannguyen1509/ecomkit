@@ -309,3 +309,15 @@ The resulting credential payload contains access/refresh tokens, their absolute 
 No API controller is production-registered in this stage. This intentionally prevents an externally reachable callback from acquiring credentials before connection persistence/config resolution is implemented. Offline core methods and the Redis-backed state implementation are fully tested. There are zero real Lazada requests, refresh calls, or order calls.
 
 The unresolved Stage 14D.1 order/checkpoint facts remain unchanged.
+
+## Stage 14D.3B implementation record
+
+The shared server workspace now owns `LazadaCredentialLifecycle`. API and Worker expose thin factories over the same core, encrypted MarketplaceConnection envelope contract, per-connection distributed-lock contract, and Lazada HTTP/signing foundation. App Key and App Secret are resolved lazily only when refresh is required, so generic startup remains independent of Lazada configuration.
+
+A sufficiently fresh access token is reused without locking or writing. An OAuth/Ecomkit-owned expired token acquires `lazada-refresh-lock-<connectionId>`, re-reads the envelope, and makes at most one signed POST to `/auth/token/refresh`. Success requires a new access token, latest refresh token, and positive expiry fields; the pair is encrypted and replaces the envelope in one repository update.
+
+Lazada refresh does not reset the original refresh-token lifetime. The persisted absolute expiry is the earlier of the existing absolute expiry and the provider's newly reported remaining-duration candidate, so refresh never extends it.
+
+`EXTERNAL_IMPORT`/`EXTERNAL` credentials never lock or refresh; expiry returns `EXTERNAL_ACCESS_TOKEN_EXPIRED`. Provider/network, malformed-response, encryption, and persistence failures never partially replace credentials. Provider-success followed by a local write failure is not reported as success or automatically retried with the old rotating token; recovery may require reauthorization.
+
+All tests use synthetic credentials and transports. There are no Order API calls, real traffic, adapter/registry activation, or Prisma changes. Stage 14D.1 order/checkpoint uncertainties remain unresolved.
