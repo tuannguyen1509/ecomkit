@@ -1,53 +1,14 @@
 "use client";
-
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { usePathname,useRouter } from "next/navigation";
+import { createContext,useCallback,useContext,useEffect,useState,type ReactNode } from "react";
 import { apiFetch } from "../lib/api";
 import styles from "./auth-shell.module.css";
-
-export type CurrentUser = { id: string; username: string; displayName: string; role: "ADMIN" | "USER" };
-const UserContext = createContext<CurrentUser | null>(null);
-export const useCurrentUser = () => useContext(UserContext);
-
-const navigation = [
-  ["/", "Tổng quan"], ["/batches/new", "Xử lý đơn hàng"], ["/history", "Lịch sử"]
-] as const;
-
-export function AuthShell({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [loading, setLoading] = useState(true);
-  const loginRoute = pathname === "/login";
-  const load = useCallback(async () => {
-    try {
-      const response = await apiFetch("/auth/me");
-      if (response.ok) setUser(await response.json() as CurrentUser);
-      else setUser(null);
-    } finally { setLoading(false); }
-  }, []);
-  useEffect(() => { void load(); }, [load]);
-  useEffect(() => {
-    const unauthorized = () => { setUser(null); router.replace("/login"); };
-    const authenticated = () => { setLoading(true); void load(); };
-    window.addEventListener("ecomkit:unauthorized", unauthorized);
-    window.addEventListener("ecomkit:authenticated", authenticated);
-    return () => { window.removeEventListener("ecomkit:unauthorized", unauthorized); window.removeEventListener("ecomkit:authenticated", authenticated); };
-  }, [load, router]);
-  useEffect(() => {
-    if (!loading && !user && !loginRoute) router.replace("/login");
-    if (!loading && user && loginRoute) router.replace("/");
-  }, [loading, user, loginRoute, router]);
-  if (loading) return <main className={styles.loading}>Đang kiểm tra phiên đăng nhập...</main>;
-  if (loginRoute) return <>{children}</>;
-  if (!user) return <main className={styles.loading}>Đang chuyển tới trang đăng nhập...</main>;
-  const logout = async () => { await apiFetch("/auth/logout", { method: "POST" }); setUser(null); router.replace("/login"); };
-  return <UserContext.Provider value={user}><div className={styles.shell}>
-    <aside className={styles.sidebar}><Link className={styles.brand} href="/">Ecomkit<br /><span>Vui Khỏe</span></Link>
-      <nav aria-label="Điều hướng chính">{navigation.map(([href, label]) => <Link key={href} className={pathname === href ? styles.active : ""} href={href}>{label}</Link>)}{user.role === "ADMIN" && <><Link className={pathname.startsWith("/marketplaces") ? styles.active : ""} href="/marketplaces">Marketplace</Link><Link className={pathname.startsWith("/admin") ? styles.active : ""} href="/admin/users">Quản lý tài khoản</Link></>}</nav>
-      <button type="button" onClick={() => void logout()}>Đăng xuất</button>
-    </aside>
-    <section className={styles.workspace}><header className={styles.header}><div><strong>{user.displayName || user.username}</strong><span>{user.role === "ADMIN" ? "Quản trị viên" : "Người dùng"}</span></div><button type="button" onClick={() => void logout()}>Đăng xuất</button></header><div className={styles.content}>{children}</div></section>
-  </div></UserContext.Provider>;
-}
+export type CurrentUser={id:string;username:string;displayName:string;role:"ADMIN"|"USER"};
+const UserContext=createContext<CurrentUser|null>(null);
+export const useCurrentUser=()=>useContext(UserContext);
+type IconName="home"|"process"|"store"|"history"|"users"|"logout";
+function Icon({name}:{name:IconName}){const common={width:19,height:19,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round" as const,strokeLinejoin:"round" as const,"aria-hidden":true};if(name==="home")return <svg {...common}><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg>;if(name==="process")return <svg {...common}><path d="M4 5h16v14H4z"/><path d="M8 9h8M8 13h5"/><path d="m16 16 2 2 3-4"/></svg>;if(name==="store")return <svg {...common}><path d="M4 10v10h16V10M3 10l2-6h14l2 6"/><path d="M8 20v-6h8v6M3 10c1 2 3 2 4 0 1 2 3 2 5 0 1 2 3 2 5 0 1 2 3 2 4 0"/></svg>;if(name==="history")return <svg {...common}><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>;if(name==="users")return <svg {...common}><circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2-6 6-6s6 2 6 6M16 5a3 3 0 0 1 0 6M17 14c2.7.3 4 2.2 4 5"/></svg>;return <svg {...common}><path d="M10 5H4v14h6M14 8l4 4-4 4M8 12h10"/></svg>}
+const baseNav=[{href:"/",label:"Tổng quan",icon:"home"},{href:"/batches/new",label:"Xử lý đơn hàng",icon:"process"},{href:"/history",label:"Lịch sử",icon:"history"}] as const;
+const titles:Record<string,string>={"/":"Tổng quan","/batches/new":"Xử lý đơn hàng","/history":"Lịch sử xử lý","/marketplaces":"Marketplace","/admin/users":"Quản lý tài khoản"};
+export function AuthShell({children}:{children:ReactNode}){const pathname=usePathname(),router=useRouter();const[user,setUser]=useState<CurrentUser|null>(null),[loading,setLoading]=useState(true);const loginRoute=pathname==="/login";const load=useCallback(async()=>{try{const response=await apiFetch("/auth/me");setUser(response.ok?await response.json() as CurrentUser:null)}finally{setLoading(false)}},[]);useEffect(()=>{void load()},[load]);useEffect(()=>{const unauthorized=()=>{setUser(null);router.replace("/login")};const authenticated=()=>{setLoading(true);void load()};window.addEventListener("ecomkit:unauthorized",unauthorized);window.addEventListener("ecomkit:authenticated",authenticated);return()=>{window.removeEventListener("ecomkit:unauthorized",unauthorized);window.removeEventListener("ecomkit:authenticated",authenticated)}},[load,router]);useEffect(()=>{if(!loading&&!user&&!loginRoute)router.replace("/login");if(!loading&&user&&loginRoute)router.replace("/")},[loading,user,loginRoute,router]);if(loading)return <main className={styles.loading}><span className={styles.loader}/><p>Đang kiểm tra phiên đăng nhập...</p></main>;if(loginRoute)return <>{children}</>;if(!user)return <main className={styles.loading}>Đang chuyển tới trang đăng nhập...</main>;const nav=user.role==="ADMIN"?[baseNav[0],baseNav[1],{href:"/marketplaces",label:"Marketplace",icon:"store" as const},baseNav[2],{href:"/admin/users",label:"Quản lý tài khoản",icon:"users" as const}]:baseNav;const active=(href:string)=>href==="/"?pathname==="/":pathname.startsWith(href);const pageTitle=Object.entries(titles).find(([path])=>path==="/"?pathname==="/":pathname.startsWith(path))?.[1]??"Ecomkit";const logout=async()=>{await apiFetch("/auth/logout",{method:"POST"});setUser(null);router.replace("/login")};return <UserContext.Provider value={user}><div className={styles.shell}><aside className={styles.sidebar}><Link className={styles.brand} href="/" aria-label="Ecomkit Vui Khỏe"><span className={styles.brandMark}>E</span><span><strong>Ecomkit</strong><small>Vui Khỏe</small></span></Link><p className={styles.navLabel}>Không gian làm việc</p><nav aria-label="Điều hướng chính">{nav.map(item=><Link key={item.href} className={active(item.href)?styles.active:""} href={item.href} aria-current={active(item.href)?"page":undefined}><Icon name={item.icon}/><span>{item.label}</span></Link>)}</nav><div className={styles.account}><span className={styles.avatar}>{(user.displayName||user.username).slice(0,1).toUpperCase()}</span><div><strong>{user.displayName||user.username}</strong><small>{user.role==="ADMIN"?"Quản trị viên":"Người dùng"}</small></div><button type="button" onClick={()=>void logout()} aria-label="Đăng xuất" title="Đăng xuất"><Icon name="logout"/></button></div></aside><section className={styles.workspace}><header className={styles.header}><div><span>Không gian làm việc</span><strong>{pageTitle}</strong></div><div className={styles.headerUser}><span className={styles.headerAvatar}>{(user.displayName||user.username).slice(0,1).toUpperCase()}</span><div><strong>{user.displayName||user.username}</strong><small>{user.role==="ADMIN"?"ADMIN":"USER"}</small></div></div></header><div className={styles.content}>{children}</div></section></div></UserContext.Provider>}
