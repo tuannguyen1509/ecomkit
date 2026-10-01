@@ -62,3 +62,14 @@ Next after manual acceptance: Stage 14D.6B — Lazada live read-only validation 
 - TikTok Shop remains not started. Stage 6B Golden and Stage 14C.7B manual visual acceptance remain pending.
 
 Next: resume Stage 14C.6B — Shopee Live Read-Only Validation + Legacy Data Match. If Shopee Developer approval or valid external prerequisites are unavailable, preserve `VALIDATION_PENDING`; do not fabricate live acceptance.
+
+## Stage 14C.6C update (2026-10-01)
+
+- Shopee OAuth connection activation: automated implementation and synthetic validation complete; manual provider authorization remains required and approval/Redirect URI dependent.
+- ADMIN OAuth start now resolves the existing encrypted `MarketplaceProviderConfig`, creates one-time Redis state, and returns the officially signed `/api/v2/shop/auth_partner` URL without making a provider call.
+- The public callback atomically consumes state, validates `code` and `shop_id`, reuses the existing token client/signer, stores Access/Refresh Token in the versioned encrypted credential envelope, captures Shop ID automatically, and redirects safely to `/marketplaces` without secrets.
+- Reauthorization updates the same `(platform, externalShopId)` connection. External-owned credentials remain unchanged when OAuth acquisition fails and transition to OAuth/ECOMKIT ownership only after successful acquisition.
+- Marketplace UI displays safe Shop ID/token-presence/expiry metadata and keeps external read-only mode separate. No provider revoke, escrow, sync enqueue, Batch, ExternalOrder, Prisma change, or real automated Shopee traffic was added.
+- Stage 14C.6B remains `VALIDATION_PENDING`; `SHOPEE_LEGACY_DATA_MATCH` remains `PENDING`. Lazada remains paused at Stage 14D.6A `MANUAL_REQUIRED`, with `LAZADA_LEGACY_DATA_MATCH = PENDING`.
+
+Next: perform the manual Shopee OAuth authorization when Developer Console approval and the configured callback permit it, then resume Stage 14C.6B live read-only validation and exact legacy `order_sn` comparison. Do not mark live validation complete from synthetic OAuth tests.

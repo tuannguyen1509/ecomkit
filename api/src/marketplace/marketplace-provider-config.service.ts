@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, Inject, Injectable } from "@nestjs/common";
 import { MarketplaceConnectionStatus, Platform, prisma } from "@ecomkit/database";
-import { MarketplaceCredentialCryptoError, getShopeeAuthorizationBaseUrl, getShopeeBaseUrl, ShopeeSigner } from "@ecomkit/shared";
+import { MarketplaceCredentialCryptoError, getShopeeBaseUrl, ShopeeSigner } from "@ecomkit/shared";
 import { ShopeeAppConfigError, ShopeeAppConfigResolver } from "@ecomkit/marketplace-server";
 import { MarketplaceCredentialService } from "./marketplace-credential.service.js";
 import type { UpdateShopeeProviderConfigDto } from "./marketplace-provider-config.dto.js";
@@ -31,7 +31,7 @@ export class MarketplaceProviderConfigService {
     const now = new Date();
     try {
       const config = await this.resolveRuntime(true); const timestamp = 1_700_000_000; const signature = new ShopeeSigner(config.partnerId, config.partnerKey).signPublic("/api/v2/auth/token/get", timestamp);
-      const auth = new URL("/auth", getShopeeAuthorizationBaseUrl(config.environment)); auth.searchParams.set("partner_id", config.partnerId); auth.searchParams.set("auth_type", "seller"); auth.searchParams.set("redirect_uri", config.redirectUri!); auth.searchParams.set("response_type", "code"); auth.searchParams.set("state", "LOCAL_CONFIGURATION_TEST");
+      const authPath = "/api/v2/shop/auth_partner"; const auth = new URL(authPath, getShopeeBaseUrl(config.environment)); auth.searchParams.set("partner_id", config.partnerId); auth.searchParams.set("timestamp", String(timestamp)); auth.searchParams.set("sign", new ShopeeSigner(config.partnerId, config.partnerKey).signPublic(authPath, timestamp)); auth.searchParams.set("redirect", config.redirectUri!); auth.searchParams.set("state", "LOCAL_CONFIGURATION_TEST");
       if (!/^[a-f0-9]{64}$/.test(signature) || !getShopeeBaseUrl(config.environment)) throw new ShopeeAppConfigError("SHOPEE_CONFIG_INVALID");
       await prisma.marketplaceProviderConfig.updateMany({ where: { platform: Platform.SHOPEE }, data: { lastTestedAt: now, lastTestStatus: "PASS", lastTestCode: "SHOPEE_CONFIG_READY" } });
       return { status: "PASS", code: "SHOPEE_CONFIG_READY", source: config.source, checks: { partnerId: true, partnerKeyEncrypted: true, encryptionKey: true, environment: true, redirectUri: true, endpointResolution: true, signing: true, oauthUrlGeneration: true, apiWorkerParity: true }, liveProviderTested: false };
@@ -43,7 +43,7 @@ export class MarketplaceProviderConfigService {
   }
   async overview() {
     const rows = await prisma.marketplaceConnection.findMany({ where: { platform: Platform.SHOPEE }, orderBy: { updatedAt: "desc" }, select: { id: true, externalShopId: true, shopName: true, status: true, credentialEnvelope: true, lastSuccessfulSyncAt: true, lastAttemptedSyncAt: true, createdAt: true, updatedAt: true, syncRuns: { orderBy: { createdAt: "desc" }, take: 10, select: { id: true, syncType: true, triggerType: true, status: true, errorCount: true, createdAt: true, completedAt: true } } } });
-    const connections = rows.map(({ credentialEnvelope, ...row }) => { let metadata: Record<string, unknown> = {}; try { metadata = credentialEnvelope ? this.credentials.decryptCredential(credentialEnvelope).providerMetadata ?? {} : {}; } catch {} return { ...row, accessTokenConfigured: Boolean(credentialEnvelope), accessTokenExpiresAt: typeof metadata.accessTokenExpiresAt === "string" ? metadata.accessTokenExpiresAt : null, credentialSource: metadata.credentialSource === "EXTERNAL_IMPORT" ? "EXTERNAL_IMPORT" : "OAUTH", refreshOwnership: metadata.refreshOwnership === "EXTERNAL" ? "EXTERNAL" : "ECOMKIT", liveApiStatus: typeof metadata.liveApiStatus === "string" ? metadata.liveApiStatus : "NOT_TESTED", lastLiveTestedAt: typeof metadata.lastLiveTestedAt === "string" ? metadata.lastLiveTestedAt : null }; });
+    const connections = rows.map(({ credentialEnvelope, ...row }) => { let credential: ReturnType<MarketplaceCredentialService["decryptCredential"]> | undefined; try { credential = credentialEnvelope ? this.credentials.decryptCredential(credentialEnvelope) : undefined; } catch {} const metadata = credential?.providerMetadata ?? {}; return { ...row, accessTokenConfigured: Boolean(credential?.accessToken), refreshTokenConfigured: Boolean(credential?.refreshToken), accessTokenExpiresAt: credential?.tokenExpiresAt ?? (typeof metadata.accessTokenExpiresAt === "string" ? metadata.accessTokenExpiresAt : null), credentialSource: metadata.credentialSource === "EXTERNAL_IMPORT" ? "EXTERNAL_IMPORT" : "OAUTH", refreshOwnership: metadata.refreshOwnership === "EXTERNAL" ? "EXTERNAL" : "ECOMKIT", liveApiStatus: typeof metadata.liveApiStatus === "string" ? metadata.liveApiStatus : "NOT_TESTED", lastLiveTestedAt: typeof metadata.lastLiveTestedAt === "string" ? metadata.lastLiveTestedAt : null }; });
     return { config: await this.getShopee(), encryptionReady: this.encryptionReady(), connections };
   }
   async importExternalToken(userId: string, input: ImportShopeeExternalTokenDto) {

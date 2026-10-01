@@ -71,6 +71,8 @@ Kiến trúc provider-neutral, hỗ trợ nhiều shop theo connection và dùng
 
 Đã triển khai official signing, OAuth foundation, token-refresh lifecycle, Order APIs, normalizer, `MarketplaceAdapter`, production registry, registered synthetic E2E, ADMIN configuration UI, external read-only token mode và mã hóa credential.
 
+Luồng OAuth-managed dành cho ADMIN: lưu cấu hình ứng dụng Shopee → chọn **Kết nối Shopee** → ủy quyền shop trên Shopee → Ecomkit tự nhận Shop ID, đổi authorization code lấy Access/Refresh Token và lưu credential đã mã hóa ở server. UI chỉ hiển thị Shop ID, thời điểm hết hạn và trạng thái “Đã lưu an toàn”; không yêu cầu sao chép hoặc hiển thị token thô. Việc ủy quyền thật vẫn phụ thuộc Redirect URI/approval trong Shopee Developer Console.
+
 Trạng thái hiện tại: **`VALIDATION_PENDING`**
 
 Acceptance gate: **`SHOPEE_LEGACY_DATA_MATCH = PENDING`**

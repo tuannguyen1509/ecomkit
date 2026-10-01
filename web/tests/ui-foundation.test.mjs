@@ -52,6 +52,12 @@ assert.match(marketplaces, /Test Lazada API/, "Lazada live-test action missing")
 assert.match(marketplaces, /Kiểm tra cấu hình không gọi Lazada/, "structural/live distinction missing");
 assert.match(marketplaces, /Không nhập refresh token/, "external refresh ownership warning missing");
 assert.doesNotMatch(marketplaces, /label="Refresh Token"/, "Lazada external mode must not accept refresh token");
+assert.match(marketplaces, /Kết nối Shopee/, "Shopee OAuth connect action missing");
+assert.match(marketplaces, /Ủy quyền lại/, "Shopee OAuth reauthorization action missing");
+assert.match(marketplaces, /refreshTokenConfigured/, "Shopee safe refresh-token status missing");
+assert.match(marketplaces, /Đã lưu an toàn/, "Shopee safe token storage label missing");
+assert.match(marketplaces, /shopeeOAuth/, "Shopee callback result handling missing");
+assert.doesNotMatch(marketplaces, /Access Token[^\n]*value displayed/, "Shopee OAuth UI must not render raw token values");
 assert.match(
   css,
   /\.buttonLink\.primary:visited\s*\{[^}]*color:\s*#fff[^}]*-webkit-text-fill-color:\s*#fff/,

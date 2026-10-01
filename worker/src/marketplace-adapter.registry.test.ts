@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Platform } from "@ecomkit/database";
 import type { MarketplaceAdapter } from "@ecomkit/shared";
+import { ShopeeConfigError } from "@ecomkit/shared";
 import { ShopeeOrderClientError } from "@ecomkit/marketplace-server";
 import { createWorkerMarketplaceAdapterRegistry, WorkerMarketplaceAdapterRegistry, WorkerMarketplaceAdapterRegistryError } from "./marketplace-adapter.registry.js";
 import { ShopeeAdapter } from "./shopee-marketplace.adapter.js";
@@ -54,20 +55,11 @@ test("real production Shopee adapter resolves without config, provider I/O, or r
 });
 
 test("missing Shopee app config fails safely before HTTP", async () => {
-  const previousId = process.env.SHOPEE_PARTNER_ID;
-  const previousKey = process.env.SHOPEE_PARTNER_KEY;
-  delete process.env.SHOPEE_PARTNER_ID;
-  delete process.env.SHOPEE_PARTNER_KEY;
-  try {
-    const transport = new WorkerShopeeOrderTransport();
-    await assert.rejects(
-      transport.list({ accessToken: "TEST_ACCESS_TOKEN_SECRET", shopId: "1", accessTokenExpiresAt: new Date(Date.now() + 60_000).toISOString() }, { timeRangeField: "create_time", timeFrom: 1, timeTo: 2, pageSize: 1 }),
-      (error: unknown) => error instanceof ShopeeOrderClientError && error.code === "SHOPEE_CONFIG_MISSING" && error.retryable === false && !JSON.stringify(error).includes("TEST_ACCESS_TOKEN_SECRET"),
-    );
-  } finally {
-    if (previousId === undefined) delete process.env.SHOPEE_PARTNER_ID; else process.env.SHOPEE_PARTNER_ID = previousId;
-    if (previousKey === undefined) delete process.env.SHOPEE_PARTNER_KEY; else process.env.SHOPEE_PARTNER_KEY = previousKey;
-  }
+  const transport = new WorkerShopeeOrderTransport(() => { throw new ShopeeConfigError("SHOPEE_CONFIG_MISSING"); });
+  await assert.rejects(
+    transport.list({ accessToken: "TEST_ACCESS_TOKEN_SECRET", shopId: "1", accessTokenExpiresAt: new Date(Date.now() + 60_000).toISOString() }, { timeRangeField: "create_time", timeFrom: 1, timeTo: 2, pageSize: 1 }),
+    (error: unknown) => error instanceof ShopeeOrderClientError && error.code === "SHOPEE_CONFIG_MISSING" && error.retryable === false && !JSON.stringify(error).includes("TEST_ACCESS_TOKEN_SECRET"),
+  );
 });
 
 test("unsupported platforms remain deterministic and mock wiring remains explicit", () => {
