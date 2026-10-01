@@ -53,3 +53,12 @@ Automated foundation: PASS. Manual UI/live validation: PENDING. ADMIN can save L
 Shopee remains `VALIDATION_PENDING`; `SHOPEE_LEGACY_DATA_MATCH` and Stage 14C.7B manual visual acceptance remain PENDING. Lazada incremental checkpoint remains deferred.
 
 Next after manual acceptance: Stage 14D.6B — Lazada live read-only validation and legacy data comparison. Never import or refresh the legacy refresh token.
+
+## Documentation checkpoint and priority decision (2026-10-01)
+
+- Root `README.md` was refreshed from the current repository, Compose, workspace scripts, environment template, security documentation, routes, and canonical handoff.
+- Lazada is paused at Stage 14D.6A `AUTOMATED PASS / MANUAL_REQUIRED`; no Lazada code was removed or rolled back, and `LAZADA_LEGACY_DATA_MATCH` remains `PENDING`.
+- Project priority has returned to Shopee Stage 14C.6B. Its status remains `VALIDATION_PENDING`, and `SHOPEE_LEGACY_DATA_MATCH` remains `PENDING` until an exact live `order_sn` set comparison passes.
+- TikTok Shop remains not started. Stage 6B Golden and Stage 14C.7B manual visual acceptance remain pending.
+
+Next: resume Stage 14C.6B — Shopee Live Read-Only Validation + Legacy Data Match. If Shopee Developer approval or valid external prerequisites are unavailable, preserve `VALIDATION_PENDING`; do not fabricate live acceptance.
