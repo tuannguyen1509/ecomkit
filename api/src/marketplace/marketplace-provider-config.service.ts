@@ -8,6 +8,32 @@ import type { ImportShopeeExternalTokenDto } from "./marketplace-provider-config
 
 const safeSelect = { platform: true, environment: true, partnerId: true, redirectUri: true, isEnabled: true, partnerSecretEnvelope: true, lastTestedAt: true, lastTestStatus: true, lastTestCode: true, createdAt: true, updatedAt: true } as const;
 export type SafeProviderConfig = { platform: "SHOPEE"; environment: string; partnerId: string; partnerIdConfigured: boolean; partnerSecretConfigured: boolean; redirectUri: string; enabled: boolean; encryptionReady: boolean; lastTestedAt: Date | null; lastTestStatus: string | null; lastTestCode: string | null; createdAt: Date; updatedAt: Date };
+type SafeCredential = ReturnType<MarketplaceCredentialService["decryptCredential"]>;
+type ReadinessRow = { externalShopId: string; status: MarketplaceConnectionStatus; credentialEnvelope: string | null };
+export type ShopeeCredentialState = "CONNECTED" | "EXTERNAL_READY" | "INCOMPLETE" | "REAUTH_REQUIRED" | "TOKEN_EXPIRED";
+
+export function deriveShopeeCredentialReadiness(row: ReadinessRow, credential?: SafeCredential, decryptFailed = false, now = Date.now()) {
+  const metadata = credential?.providerMetadata ?? {};
+  const credentialSource = metadata.credentialSource === "OAUTH" ? "OAUTH" : metadata.credentialSource === "EXTERNAL_IMPORT" ? "EXTERNAL_IMPORT" : "UNKNOWN";
+  const refreshOwnership = metadata.refreshOwnership === "ECOMKIT" ? "ECOMKIT" : metadata.refreshOwnership === "EXTERNAL" ? "EXTERNAL" : "UNKNOWN";
+  const accessTokenPresent = typeof credential?.accessToken === "string" && credential.accessToken.length > 0;
+  const refreshTokenPresent = typeof credential?.refreshToken === "string" && credential.refreshToken.length > 0;
+  const accessExpiresAt = typeof credential?.tokenExpiresAt === "string" && Number.isFinite(new Date(credential.tokenExpiresAt).valueOf()) ? credential.tokenExpiresAt : null;
+  const refreshExpiresAt = typeof credential?.refreshTokenExpiresAt === "string" && Number.isFinite(new Date(credential.refreshTokenExpiresAt).valueOf()) ? credential.refreshTokenExpiresAt : null;
+  const shopMatches = typeof metadata.shopId === "string" && metadata.shopId.length > 0 && metadata.shopId === row.externalShopId;
+  const base = { credentialSource, refreshOwnership, credentialEnvelopePresent: Boolean(row.credentialEnvelope), credentialDecryptable: Boolean(credential) && !decryptFailed, accessTokenPresent, refreshTokenPresent, accessExpiresAt, refreshExpiresAt };
+  if (row.status === MarketplaceConnectionStatus.REAUTH_REQUIRED) return { ...base, credentialReady: false, credentialState: "REAUTH_REQUIRED" as const };
+  if (row.status !== MarketplaceConnectionStatus.ACTIVE || !row.credentialEnvelope || decryptFailed || !credential || !shopMatches) return { ...base, credentialReady: false, credentialState: "INCOMPLETE" as const };
+  if (credentialSource === "EXTERNAL_IMPORT" && refreshOwnership === "EXTERNAL" && accessTokenPresent && accessExpiresAt) {
+    const expired = new Date(accessExpiresAt).valueOf() <= now;
+    return { ...base, credentialReady: !expired, credentialState: expired ? "TOKEN_EXPIRED" as const : "EXTERNAL_READY" as const };
+  }
+  if (credentialSource === "OAUTH" && refreshOwnership === "ECOMKIT" && accessTokenPresent && refreshTokenPresent && accessExpiresAt && refreshExpiresAt) {
+    if (new Date(refreshExpiresAt).valueOf() <= now) return { ...base, credentialReady: false, credentialState: "REAUTH_REQUIRED" as const };
+    return { ...base, credentialReady: true, credentialState: new Date(accessExpiresAt).valueOf() <= now ? "TOKEN_EXPIRED" as const : "CONNECTED" as const };
+  }
+  return { ...base, credentialReady: false, credentialState: "INCOMPLETE" as const };
+}
 
 @Injectable()
 export class MarketplaceProviderConfigService {
@@ -43,8 +69,18 @@ export class MarketplaceProviderConfigService {
   }
   async overview() {
     const rows = await prisma.marketplaceConnection.findMany({ where: { platform: Platform.SHOPEE }, orderBy: { updatedAt: "desc" }, select: { id: true, externalShopId: true, shopName: true, status: true, credentialEnvelope: true, lastSuccessfulSyncAt: true, lastAttemptedSyncAt: true, createdAt: true, updatedAt: true, syncRuns: { orderBy: { createdAt: "desc" }, take: 10, select: { id: true, syncType: true, triggerType: true, status: true, errorCount: true, createdAt: true, completedAt: true } } } });
-    const connections = rows.map(({ credentialEnvelope, ...row }) => { let credential: ReturnType<MarketplaceCredentialService["decryptCredential"]> | undefined; try { credential = credentialEnvelope ? this.credentials.decryptCredential(credentialEnvelope) : undefined; } catch {} const metadata = credential?.providerMetadata ?? {}; return { ...row, accessTokenConfigured: Boolean(credential?.accessToken), refreshTokenConfigured: Boolean(credential?.refreshToken), accessTokenExpiresAt: credential?.tokenExpiresAt ?? (typeof metadata.accessTokenExpiresAt === "string" ? metadata.accessTokenExpiresAt : null), credentialSource: metadata.credentialSource === "EXTERNAL_IMPORT" ? "EXTERNAL_IMPORT" : "OAUTH", refreshOwnership: metadata.refreshOwnership === "EXTERNAL" ? "EXTERNAL" : "ECOMKIT", liveApiStatus: typeof metadata.liveApiStatus === "string" ? metadata.liveApiStatus : "NOT_TESTED", lastLiveTestedAt: typeof metadata.lastLiveTestedAt === "string" ? metadata.lastLiveTestedAt : null }; });
+    const connections = rows.map(({ credentialEnvelope, ...row }) => { let credential: SafeCredential | undefined; let decryptFailed = false; try { credential = credentialEnvelope ? this.credentials.decryptCredential(credentialEnvelope) : undefined; } catch { decryptFailed = true; } const metadata = credential?.providerMetadata ?? {}; const readiness = deriveShopeeCredentialReadiness({ externalShopId: row.externalShopId, status: row.status, credentialEnvelope }, credential, decryptFailed); return { ...row, ...readiness, accessTokenConfigured: readiness.accessTokenPresent, refreshTokenConfigured: readiness.refreshTokenPresent, accessTokenExpiresAt: readiness.accessExpiresAt, liveApiStatus: typeof metadata.liveApiStatus === "string" ? metadata.liveApiStatus : "NOT_TESTED", lastLiveTestedAt: typeof metadata.lastLiveTestedAt === "string" ? metadata.lastLiveTestedAt : null }; });
     return { config: await this.getShopee(), encryptionReady: this.encryptionReady(), connections };
+  }
+  async assertShopeeConnectionReady(connectionId: string): Promise<void> {
+    const row = await prisma.marketplaceConnection.findUnique({ where: { id: connectionId }, select: { platform: true, externalShopId: true, status: true, credentialEnvelope: true } });
+    if (!row || row.platform !== Platform.SHOPEE) throw new BadRequestException({ errorCode: "MARKETPLACE_CONNECTION_NOT_FOUND", message: "Shopee connection was not found." });
+    let credential: SafeCredential | undefined; let decryptFailed = false;
+    try { credential = row.credentialEnvelope ? this.credentials.decryptCredential(row.credentialEnvelope) : undefined; } catch { decryptFailed = true; }
+    const readiness = deriveShopeeCredentialReadiness(row, credential, decryptFailed);
+    if (readiness.credentialReady) return;
+    const code = readiness.credentialState === "TOKEN_EXPIRED" && readiness.credentialSource === "EXTERNAL_IMPORT" ? "EXTERNAL_ACCESS_TOKEN_EXPIRED" : readiness.credentialState === "REAUTH_REQUIRED" ? "SHOPEE_REAUTH_REQUIRED" : "SHOPEE_CONNECTION_CREDENTIALS_INCOMPLETE";
+    throw new BadRequestException({ errorCode: code, message: "Shopee connection credentials are not ready." });
   }
   async importExternalToken(userId: string, input: ImportShopeeExternalTokenDto) {
     const expiresAt = new Date(input.accessTokenExpiresAt);

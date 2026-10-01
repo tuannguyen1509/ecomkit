@@ -83,6 +83,7 @@ async function run(): Promise<void> {
   const resolved = registry.resolve(Platform.SHOPEE);
   assert.ok(resolved instanceof ShopeeAdapter); assert.equal(factoryCalls, 1);
   const worker = startMarketplaceSyncWorker({ queueName, concurrency: 2, adapterRegistry: registry });
+  let restartedWorker: ReturnType<typeof startMarketplaceSyncWorker> | undefined;
   const queue = new Queue<{ connectionId: string; syncRunId: string }>(queueName, { connection: redis });
   const connectionIds: string[] = [];
   const userToken = randomBytes(32).toString("base64url");
@@ -153,22 +154,28 @@ async function run(): Promise<void> {
 
     await worker.pause(true);
     const restartConnection = await createConnection("synthetic-restart", "empty"); const restartRun = await createRun(restartConnection.id, MarketplaceSyncType.INITIAL, initialStart, initialEnd); await enqueue(restartRun); await worker.close();
-    const restarted = startMarketplaceSyncWorker({ queueName, concurrency: 2, adapterRegistry: registry });
-    assert.equal((await terminal(restartRun.id)).status, MarketplaceSyncStatus.SUCCESS); await restarted.close();
+    restartedWorker = startMarketplaceSyncWorker({ queueName, concurrency: 2, adapterRegistry: registry });
+    assert.equal((await terminal(restartRun.id)).status, MarketplaceSyncStatus.SUCCESS); await restartedWorker.close(); restartedWorker = undefined;
 
     const persisted = await prisma.marketplaceExternalOrder.findMany({ where: { connectionId: { in: connectionIds } } });
     const runs = await prisma.marketplaceSyncRun.findMany({ where: { connectionId: { in: connectionIds } }, include: { errors: true, batch: { include: { orders: true, processingErrors: true } } } });
     const serialized = JSON.stringify({ persisted, runs, csvText }); for (const marker of secretMarkers) assert.ok(!serialized.includes(marker));
     assert.ok(providerCalls > 0); assert.equal(realNetworkCalls, 0);
   } finally {
-    await worker.close().catch(() => undefined); await queue.close();
+    await restartedWorker?.close().catch(() => undefined); await worker.close().catch(() => undefined); await queue.obliterate({ force: true }).catch(() => undefined); await queue.close().catch(() => undefined);
     const runs = await prisma.marketplaceSyncRun.findMany({ where: { connectionId: { in: connectionIds } }, select: { id: true, batchId: true } });
-    await prisma.marketplaceSyncError.deleteMany({ where: { syncRunId: { in: runs.map((run) => run.id) } } });
-    await prisma.marketplaceSyncRun.deleteMany({ where: { connectionId: { in: connectionIds } } });
-    for (const batchId of runs.flatMap((run) => run.batchId ? [run.batchId] : [])) await prisma.batch.delete({ where: { id: batchId } }).catch(() => undefined);
-    await prisma.marketplaceExternalOrder.deleteMany({ where: { connectionId: { in: connectionIds } } });
-    await prisma.marketplaceConnection.deleteMany({ where: { id: { in: connectionIds } } });
-    await prisma.session.deleteMany({ where: { userId: user.id } }); await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined); await prisma.$disconnect();
+    const runIds = runs.map((run) => run.id), batchIds = runs.flatMap((run) => run.batchId ? [run.batchId] : []);
+    await prisma.$transaction(async (tx) => {
+      await tx.batch.deleteMany({ where: { id: { in: batchIds } } });
+      await tx.marketplaceSyncError.deleteMany({ where: { syncRunId: { in: runIds } } });
+      await tx.marketplaceSyncRun.deleteMany({ where: { id: { in: runIds } } });
+      await tx.marketplaceExternalOrder.deleteMany({ where: { connectionId: { in: connectionIds } } });
+      await tx.marketplaceConnection.deleteMany({ where: { id: { in: connectionIds } } });
+      await tx.session.deleteMany({ where: { userId: user.id } });
+      await tx.user.delete({ where: { id: user.id } });
+    });
+    assert.equal(await prisma.marketplaceConnection.count({ where: { id: { in: connectionIds } } }), 0, "test-owned Shopee connections must be cleaned by exact ID");
+    await prisma.$disconnect();
   }
   console.log("registered Shopee synthetic end-to-end marketplace sync passed");
 }

@@ -73,3 +73,16 @@ Next: resume Stage 14C.6B — Shopee Live Read-Only Validation + Legacy Data Mat
 - Stage 14C.6B remains `VALIDATION_PENDING`; `SHOPEE_LEGACY_DATA_MATCH` remains `PENDING`. Lazada remains paused at Stage 14D.6A `MANUAL_REQUIRED`, with `LAZADA_LEGACY_DATA_MATCH = PENDING`.
 
 Next: perform the manual Shopee OAuth authorization when Developer Console approval and the configured callback permit it, then resume Stage 14C.6B live read-only validation and exact legacy `order_sn` comparison. Do not mark live validation complete from synthetic OAuth tests.
+
+## Stage 14C.6C.1 update (2026-10-01)
+
+- Synthetic data incident root cause confirmed: `worker/src/shopee-registered.e2e-test.ts` created `synthetic-restart-*` connections in the canonical local database. Its teardown could stop before cleanup when queue/worker shutdown failed, and the restarted Worker was not retained for guaranteed `finally` cleanup.
+- The two positively identified historical E2E runs contained 14 test-owned Shopee connections, 20 sync runs, 6 sync errors, 12 external orders, 6 batches, and 14 canonical orders. All 14 connections had no credential envelope. They and only their exact-ID dependencies were removed; no real/user connection or credential was removed.
+- The registered Shopee E2E now tracks both Worker instances, guards shutdown, cleans only IDs created by that run in dependency-safe transactional order, and asserts that no test-owned connection remains. A rerun passed and left zero synthetic Shopee connections in the operator database.
+- Shopee `ConnectionStatus` and credential readiness are now separate. `ACTIVE` alone is insufficient: OAuth readiness requires a decryptable envelope, matching Shop ID, OAuth/Ecomkit ownership, Access and Refresh Tokens, and both expiry metadata fields. External readiness separately requires external ownership, a valid Access Token, and access expiry; no Refresh Token is required.
+- The safe Marketplace DTO exposes presence/readiness metadata only. Missing or undecryptable credentials display an incomplete/reauthorization state, never `CONNECTED`; raw tokens remain server-only.
+- `Test Shopee API` validates credential readiness before OrderClient/provider access. Incomplete local credentials fail deterministically with a local configuration/lifecycle code and make zero provider calls.
+- Automated tests, Shopee regressions, builds, registered synthetic E2E, and canonical Docker stack checks passed. No real Shopee traffic, Prisma change, migration, or Lazada behavior change occurred.
+- Stage 14C.6C remains `MANUAL_REQUIRED`; Stage 14C.6B remains `VALIDATION_PENDING`; `SHOPEE_LEGACY_DATA_MATCH` remains `PENDING`. Lazada remains paused at Stage 14D.6A `MANUAL_REQUIRED`.
+
+Next: manually verify `/marketplaces` no longer shows the synthetic Shop ID or a false connected state. This check requires no real Shopee provider call. Resume real OAuth only after this patch is accepted.

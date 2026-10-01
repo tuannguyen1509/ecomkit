@@ -57,6 +57,9 @@ assert.match(marketplaces, /Ủy quyền lại/, "Shopee OAuth reauthorization a
 assert.match(marketplaces, /refreshTokenConfigured/, "Shopee safe refresh-token status missing");
 assert.match(marketplaces, /Đã lưu an toàn/, "Shopee safe token storage label missing");
 assert.match(marketplaces, /shopeeOAuth/, "Shopee callback result handling missing");
+assert.match(marketplaces, /credentialReady/, "Shopee connection readiness must be separate from ACTIVE status");
+assert.match(marketplaces, /Cấu hình kết nối chưa hoàn tất/, "incomplete Shopee connection state missing");
+assert.match(marketplaces, /disabled=\{!oauthConnected\}/, "Shopee live test must be disabled for incomplete OAuth credentials");
 assert.doesNotMatch(marketplaces, /Access Token[^\n]*value displayed/, "Shopee OAuth UI must not render raw token values");
 assert.match(
   css,
