@@ -488,3 +488,17 @@ Each envelope uses exact order identity for `marketplaceOrderId` and `rawOrderCo
 Synthetic coverage includes empty/basic results, pagination through OrderClient, 50/50/20 item batching, mixed statuses, repeated units, large IDs, deterministic and multi-level splitting, inclusive midpoint deduplication, unsplittable windows, strict group completeness, item/order mismatch, duplicate items, normalization failure, raw immutability, duplicate conflict policy, lifecycle-error propagation, and immediate INCREMENTAL rejection. No production registry, Worker factory, persistence, marketplace-sync job, Prisma change, or real Lazada traffic was added.
 
 Durable incremental behavior remains deferred until item-status-to-order-`updated_at` semantics are proven.
+
+## Stage 14D.5C registered synthetic INITIAL pipeline
+
+The production Worker registry now registers `Platform.LAZADA` through a lazy `createWorkerLazadaAdapter` factory. Registry construction and adapter lookup perform no provider call and do not resolve provider configuration. Lazada App Key/App Secret are resolved only when the signed HTTP client is used. The generic `MarketplaceProviderConfig.partnerId` and encrypted `partnerSecretEnvelope` map internally to Lazada App Key/App Secret; no schema or provider-specific table was added. Missing, disabled, non-production, or undecryptable config fails safely as `LAZADA_CONFIG_MISSING`.
+
+The Worker factory composes the existing encrypted connection repository, credential crypto, distributed refresh lock, Lazada lifecycle, signed HTTP core, OrderClient, Normalizer, and INITIAL-only adapter. Worker/API dependencies remain separate and no Lazada queue or job payload was introduced. The generic payload remains `{ connectionId, syncRunId }`.
+
+The generic marketplace materializer now consumes the already-existing provider-neutral normalized item contract instead of dropping it. Every normalized item creates one canonical `OrderItem`; no SKU grouping occurs, so Lazada repeated units remain separate with quantity one. Common normalized order fields map to the existing 24-column Order fields without provider calculations. Shopee registered INITIAL/INCREMENTAL, checkpoint, stale handling, and retry regressions remain passing.
+
+The registered synthetic E2E instantiates Lazada through the real registry/factory and injects only a fake transport and synthetic config. It proves three verified orders through signed HTTP request construction, lifecycle, OrderClient, adapter, ExternalOrder persistence, Batch, canonical Order/OrderItem, authenticated Result/History, XLSX, and BOM-prefixed CSV. Raw `{ order, items }`, unknown provider fields, mixed statuses, repeated units, masked/missing PII, and a provider ID beyond JavaScript safe-number range remain intact. No fake UploadedFile is created.
+
+Additional registered scenarios cover empty INITIAL, replay/idempotency, same order ID across connections/providers, external valid/expired credentials, OAuth-owned synthetic refresh, transient network retry owned by BullMQ, malformed response, missing item group, deterministic parent-window splitting, and immediate INCREMENTAL rejection. Lazada INITIAL leaves `resultCursor` and connection `syncCursor` null. No candidate checkpoint, `updatedThrough`, durable offset, real credential, real network, n8n access, or `get-ecom-order` access exists.
+
+Durable Lazada incremental sync remains deferred until every relevant item-status transition is proven to advance order-level `updated_at`.

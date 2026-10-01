@@ -7,9 +7,9 @@ import { createWorkerMarketplaceAdapterRegistry, WorkerMarketplaceAdapterRegistr
 import { ShopeeAdapter } from "./shopee-marketplace.adapter.js";
 import { WorkerShopeeOrderTransport } from "./shopee-order.worker.js";
 
-function fakeAdapter(): MarketplaceAdapter {
+function fakeAdapter(platform: "SHOPEE" | "LAZADA" = "SHOPEE"): MarketplaceAdapter {
   return {
-    platform: "SHOPEE",
+    platform,
     async getAuthorizationUrl() { return { authorizationUrl: "https://example.invalid" }; },
     async exchangeAuthorizationCode() { return { connection: { externalShopId: "test-shop" } }; },
     async refreshAccessToken() {},
@@ -25,6 +25,16 @@ test("production registry registers SHOPEE lazily and caches its V2 adapter", ()
   assert.equal(constructions, 0);
   assert.equal(registry.resolve(Platform.SHOPEE), adapter);
   assert.equal(registry.resolve(Platform.SHOPEE), adapter);
+  assert.equal(constructions, 1);
+});
+
+test("production registry registers LAZADA lazily without resolving provider config", () => {
+  let constructions = 0;
+  const adapter = fakeAdapter("LAZADA");
+  const registry = createWorkerMarketplaceAdapterRegistry({ enableMockAdapter: false, lazadaFactory: () => { constructions++; return adapter; } });
+  assert.equal(constructions, 0);
+  assert.equal(registry.resolve(Platform.LAZADA), adapter);
+  assert.equal(registry.resolve(Platform.LAZADA), adapter);
   assert.equal(constructions, 1);
 });
 

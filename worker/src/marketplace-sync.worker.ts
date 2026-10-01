@@ -81,7 +81,34 @@ async function materializeBatch(connectionId: string, syncRunId: string, platfor
     const run = await tx.marketplaceSyncRun.findUniqueOrThrow({ where: { id: syncRunId }, select: { batchId: true } });
     if (run.batchId) return run.batchId;
     const batch = await tx.batch.create({ data: { processingStatus: "SUCCESS", startedAt: new Date(), finishedAt: new Date(), orderCount: orders.length, warningCount: orders.length } });
-    await tx.order.createMany({ data: orders.map((order) => ({ batchId: batch.id, rawOrderCode: order.rawOrderCode, normalizedOrderCode: order.marketplaceOrderId.trim(), platform, matchingStatus: "PDF_NOT_FOUND", orderStatus: order.normalizedData.rawProviderStatus, sourceRefs: { sourceType: "MARKETPLACE_API", platform, connectionId, externalShopId, marketplaceOrderId: order.marketplaceOrderId, syncRunId } })) });
+    for (const adapterOrder of orders) {
+      const normalized = adapterOrder.normalizedData;
+      const metadata = normalized.providerMetadata ?? {};
+      const shipping = metadata.shippingAddress && typeof metadata.shippingAddress === "object" ? metadata.shippingAddress as Record<string, unknown> : {};
+      const canonical = await tx.order.create({ data: {
+        batchId: batch.id,
+        rawOrderCode: adapterOrder.rawOrderCode,
+        normalizedOrderCode: adapterOrder.marketplaceOrderId.trim(),
+        platform,
+        matchingStatus: "PDF_NOT_FOUND",
+        orderDate: normalized.providerCreatedAt ? new Date(normalized.providerCreatedAt) : null,
+        salesChannel: platform,
+        orderStatus: normalized.rawProviderStatus,
+        phone: typeof shipping.phone === "string" ? shipping.phone : null,
+        provinceCity: typeof shipping.city === "string" ? shipping.city : null,
+        note: typeof metadata.buyerNote === "string" ? metadata.buyerNote : null,
+        sourceRefs: { sourceType: "MARKETPLACE_API", platform, connectionId, externalShopId, marketplaceOrderId: adapterOrder.marketplaceOrderId, syncRunId },
+      } });
+      if (normalized.items?.length) await tx.orderItem.createMany({ data: normalized.items.map((item) => ({
+        orderId: canonical.id,
+        productName: item.productName,
+        sku: item.sellerSku ?? item.platformSku,
+        quantity: item.quantity,
+        price: item.unitPrice,
+        variant: item.variationName,
+        sourcePlatform: platform,
+      })) });
+    }
     await tx.marketplaceSyncRun.update({ where: { id: syncRunId }, data: { batchId: batch.id } });
     return batch.id;
   });

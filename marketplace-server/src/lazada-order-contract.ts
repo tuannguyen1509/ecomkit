@@ -43,7 +43,9 @@ export type LazadaGetOrdersData = Readonly<{ count: number; countTotal?: number;
 export type LazadaMultipleOrderItemsGroup = Readonly<Record<string, unknown> & { order_id: string; order_number?: string; order_items: readonly LazadaRawOrderItem[] }>;
 
 export class LazadaOrderContractError extends Error {
+  readonly retryable = false;
   constructor(public readonly code: "LAZADA_ORDER_RESPONSE_INVALID") { super(code); this.name = "LazadaOrderContractError"; }
+  toJSON(): object { return { name: this.name, code: this.code, retryable: false }; }
 }
 
 function record(value: unknown): Record<string, unknown> {

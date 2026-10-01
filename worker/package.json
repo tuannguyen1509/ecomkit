@@ -11,6 +11,7 @@
     "test:marketplace-sync": "tsx --tsconfig tsconfig.json src/marketplace-sync.integration-test.ts",
     "test:marketplace-registry": "tsx --tsconfig tsconfig.json --test src/marketplace-adapter.registry.test.ts",
     "test:shopee-registered-e2e": "tsx --tsconfig tsconfig.json src/shopee-registered.e2e-test.ts",
+    "test:lazada-registered-e2e": "tsx --tsconfig tsconfig.json src/lazada-registered.e2e-test.ts",
     "test:shopee-lifecycle": "tsx --tsconfig tsconfig.json src/shopee-lifecycle.integration-test.ts",
     "test:shopee-order-client": "tsx --tsconfig tsconfig.json src/shopee-order.worker.test.ts",
     "test:shopee-adapter": "tsx --tsconfig tsconfig.json src/shopee-marketplace.adapter.test.ts",

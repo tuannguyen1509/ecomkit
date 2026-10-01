@@ -1,6 +1,6 @@
 # Ecomkit — Vui Khỏe project handoff
 
-Updated: 2026-09-30
+Updated: 2026-10-01
 
 Repository: `C:\Users\nkluck\ecomkit`
 Branch: `vuikhoe`
@@ -18,13 +18,14 @@ Lazada:
 - 14D.4A Order API contracts/fixtures: PASS (`4de5e2f`)
 - 14D.4B OrderClient foundation: PASS (`8239a3d`)
 - 14D.5A Normalizer policy/implementation: PASS (`b5515eb`)
-- 14D.5B MarketplaceAdapter INITIAL-sync foundation: PASS (`feat: add Lazada initial sync adapter`, this checkpoint commit)
+- 14D.5B MarketplaceAdapter INITIAL-sync foundation: PASS (`10e2197`)
+- 14D.5C registered synthetic INITIAL pipeline: PASS (`feat: register Lazada initial sync pipeline`, this checkpoint commit)
 - Real Lazada traffic: NO
-- Lazada Adapter: INITIAL-only foundation implemented; not production-registered
-- Lazada registry/persistence: NOT IMPLEMENTED
+- Lazada Adapter: INITIAL-only and production-registered
+- Lazada synthetic runtime/persistence: PASS; live provider validation not performed
 - Prisma schema/migration change: NO
 
-Stage 14D.5B adds a server-only Lazada MarketplaceAdapter over the existing OrderClient and Normalizer. It requires a bounded INITIAL create-time window, splits only windows that exceed Lazada's offset ceiling, deduplicates inclusive boundaries by exact order ID, batches item groups up to 50, and rejects missing/extra/duplicate groups. Raw and normalized envelopes remain separate. INCREMENTAL is rejected before provider/lifecycle access and no candidate checkpoint is returned.
+Stage 14D.5C registers Lazada lazily in the production Worker registry and proves the complete generic INITIAL pipeline with synthetic config and fake transport: lifecycle, OrderClient, adapter, ExternalOrder, Batch, canonical Order/OrderItem, Result, History, XLSX, and CSV. Missing configuration fails safely, repeated units remain separate, no fake UploadedFile is created, and idempotency/provider isolation remain connection-scoped. INCREMENTAL is rejected before provider calls and no checkpoint is committed. No real Lazada traffic or credentials were used.
 
 Unresolved Lazada facts remain:
 
@@ -43,4 +44,4 @@ Shopee remains unchanged:
 
 Git safety: do not reset, clean, force push, or push automatically.
 
-Next: Stage 14D.5C — Lazada Registered Synthetic Initial-Sync E2E. Wire the adapter into the production registry/factory carefully while keeping INCREMENTAL rejected and all provider traffic synthetic. Prove ExternalOrder through Batch, canonical Order, Result/Error, and Export without real Lazada calls.
+Next: Stage 14D.6A — Lazada Admin Configuration + External Read-Only Validation Foundation. Keep external validation refresh-owned by the source system, import no refresh token, and permit only one narrow read-only test. Durable incremental sync remains deferred.

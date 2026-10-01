@@ -2,6 +2,7 @@ import { Platform } from "@ecomkit/database";
 import type { MarketplaceAdapter } from "@ecomkit/shared";
 import { MarketplaceMockAdapter } from "./marketplace-mock.adapter.js";
 import { createWorkerShopeeAdapter } from "./shopee-marketplace.worker.js";
+import { createWorkerLazadaAdapter } from "./lazada-marketplace.worker.js";
 
 export type MarketplaceAdapterFactory = () => MarketplaceAdapter;
 
@@ -41,6 +42,7 @@ export class WorkerMarketplaceAdapterRegistry {
 export function createWorkerMarketplaceAdapterRegistry(input: Readonly<{
   enableMockAdapter?: boolean;
   shopeeFactory?: MarketplaceAdapterFactory;
+  lazadaFactory?: MarketplaceAdapterFactory;
   mockFactory?: MarketplaceAdapterFactory;
 }> = {}): WorkerMarketplaceAdapterRegistry {
   const registry = new WorkerMarketplaceAdapterRegistry();
@@ -48,5 +50,6 @@ export function createWorkerMarketplaceAdapterRegistry(input: Readonly<{
   registry.registerFactory(Platform.SHOPEE, useMock
     ? input.mockFactory ?? (() => new MarketplaceMockAdapter())
     : input.shopeeFactory ?? createWorkerShopeeAdapter);
+  registry.registerFactory(Platform.LAZADA, input.lazadaFactory ?? createWorkerLazadaAdapter);
   return registry;
 }
