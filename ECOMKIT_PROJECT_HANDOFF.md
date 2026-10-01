@@ -45,3 +45,11 @@ Shopee remains unchanged:
 Git safety: do not reset, clean, force push, or push automatically.
 
 Next: Stage 14D.6A — Lazada Admin Configuration + External Read-Only Validation Foundation. Keep external validation refresh-owned by the source system, import no refresh token, and permit only one narrow read-only test. Durable incremental sync remains deferred.
+
+## Stage 14D.6A update (2026-10-01)
+
+Automated foundation: PASS. Manual UI/live validation: PENDING. ADMIN can save Lazada Vietnam App Key/App Secret using the generic provider config, import externally managed Seller ID/Access Token/expiry without a refresh token, run a no-network structural check, and explicitly run one narrow read-only GetOrders test. Secrets are encrypted and absent from safe GET responses. Automated validation used fake transport only; no real Lazada traffic occurred and no Prisma migration was added.
+
+Shopee remains `VALIDATION_PENDING`; `SHOPEE_LEGACY_DATA_MATCH` and Stage 14C.7B manual visual acceptance remain PENDING. Lazada incremental checkpoint remains deferred.
+
+Next after manual acceptance: Stage 14D.6B — Lazada live read-only validation and legacy data comparison. Never import or refresh the legacy refresh token.

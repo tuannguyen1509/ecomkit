@@ -24,6 +24,7 @@ const brandingPage = readFileSync(
   new URL("../src/app/admin/settings/branding/page.tsx", import.meta.url),
   "utf8",
 );
+const marketplaces = readFileSync(new URL("../src/app/marketplaces/page.tsx", import.meta.url), "utf8");
 for (const component of [
   "ButtonLink",
   "Field",
@@ -47,6 +48,10 @@ assert.match(
   /ButtonLink[\s\S]*?<a[\s\S]*?\{children\}[\s\S]*?<\/a>[\s\S]*?<Link[\s\S]*?\{children\}[\s\S]*?<\/Link>/,
   "ButtonLink must render its visible children",
 );
+assert.match(marketplaces, /Test Lazada API/, "Lazada live-test action missing");
+assert.match(marketplaces, /Kiểm tra cấu hình không gọi Lazada/, "structural/live distinction missing");
+assert.match(marketplaces, /Không nhập refresh token/, "external refresh ownership warning missing");
+assert.doesNotMatch(marketplaces, /label="Refresh Token"/, "Lazada external mode must not accept refresh token");
 assert.match(
   css,
   /\.buttonLink\.primary:visited\s*\{[^}]*color:\s*#fff[^}]*-webkit-text-fill-color:\s*#fff/,

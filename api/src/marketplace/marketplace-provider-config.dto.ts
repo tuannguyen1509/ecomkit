@@ -47,3 +47,28 @@ export class TestShopeeLiveReadDto {
   @IsOptional() @IsString() @MaxLength(100)
   orderStatus?: string;
 }
+
+export class UpdateLazadaProviderConfigDto {
+  @IsString() @IsNotEmpty() @MaxLength(200)
+  appKey!: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(4096)
+  appSecret?: string;
+  @IsOptional() @IsUrl({ require_protocol: true, protocols: ["http", "https"], require_tld: false }) @MaxLength(2048)
+  redirectUri?: string;
+  @IsBoolean()
+  enabled!: boolean;
+}
+
+export class ImportLazadaExternalTokenDto {
+  @IsString() @IsNotEmpty() @MaxLength(200)
+  sellerId!: string;
+  @IsOptional() @IsString() @IsNotEmpty() @MaxLength(8192)
+  accessToken?: string;
+  @IsDateString()
+  accessTokenExpiresAt!: string;
+}
+
+export class TestLazadaExternalDto {
+  @IsString() @IsNotEmpty() @MaxLength(200)
+  connectionId!: string;
+}

@@ -10,10 +10,11 @@ import { ShopeeTokenService } from "./shopee-token.service.js";
 import { ShopeeOrderClient } from "./shopee-order.client.js";
 import { MarketplaceProviderConfigController } from "./marketplace-provider-config.controller.js";
 import { MarketplaceProviderConfigService } from "./marketplace-provider-config.service.js";
+import { LazadaAdminService } from "./lazada-admin.service.js";
 
 @Module({
   controllers: [ShopeeOAuthController, MarketplaceProviderConfigController],
-  providers: [MarketplaceCredentialService, MarketplaceProviderConfigService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService, ShopeeOAuthStateStore, ShopeeOAuthService, ShopeeTokenService, ShopeeOrderClient],
-  exports: [MarketplaceCredentialService, MarketplaceProviderConfigService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService]
+  providers: [MarketplaceCredentialService, MarketplaceProviderConfigService, LazadaAdminService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService, ShopeeOAuthStateStore, ShopeeOAuthService, ShopeeTokenService, ShopeeOrderClient],
+  exports: [MarketplaceCredentialService, MarketplaceProviderConfigService, LazadaAdminService, MarketplaceAdapterRegistry, MarketplaceConnectionService, MarketplaceSyncQueueService]
 })
 export class MarketplaceModule {}

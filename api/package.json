@@ -32,6 +32,7 @@
     "test:shopee-external-token": "tsx src/marketplace/shopee-external-token.integration-test.ts",
     "test:shopee-token": "tsx src/marketplace/shopee-token.integration-test.ts",
     "test:shopee-order-client": "tsx src/marketplace/shopee-order.client.test.ts",
+    "test:lazada-admin": "tsx src/marketplace/lazada-admin.integration-test.ts",
     "test:batch-queue-authenticated": "tsx src/queue/batch-queue-authenticated.integration-test.ts",
     "auth:bootstrap-admin": "tsx src/auth/bootstrap-admin.ts"
   },

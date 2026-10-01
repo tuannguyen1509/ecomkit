@@ -502,3 +502,11 @@ The registered synthetic E2E instantiates Lazada through the real registry/facto
 Additional registered scenarios cover empty INITIAL, replay/idempotency, same order ID across connections/providers, external valid/expired credentials, OAuth-owned synthetic refresh, transient network retry owned by BullMQ, malformed response, missing item group, deterministic parent-window splitting, and immediate INCREMENTAL rejection. Lazada INITIAL leaves `resultCursor` and connection `syncCursor` null. No candidate checkpoint, `updatedThrough`, durable offset, real credential, real network, n8n access, or `get-ecom-order` access exists.
 
 Durable Lazada incremental sync remains deferred until every relevant item-status transition is proven to advance order-level `updated_at`.
+
+## Stage 14D.6A ADMIN configuration and external read-only validation
+
+The ADMIN Marketplace API and UI now support Lazada provider configuration using the existing generic `MarketplaceProviderConfig`: Vietnam production region, App Key, encrypted App Secret, optional future OAuth Redirect URI, and enabled state. Blank App Secret updates preserve the existing encrypted envelope. Safe GET responses expose only configured flags and non-secret metadata.
+
+External validation reuses `MarketplaceConnection` with `externalShopId=vn:<sellerId>`, `CredentialSource=EXTERNAL_IMPORT`, and `RefreshOwnership=EXTERNAL`. Only Seller ID, encrypted Access Token, and expiry are accepted; no refresh-token field exists. Structural validation performs no provider call and does not require domain, callback, or OAuth.
+
+The explicit live-test action is ADMIN-only and performs exactly one signed `GET /orders/get` request with `limit=1`. It does not fetch items, enqueue sync, persist orders, create a Batch, poll, retry, refresh, revoke, or access legacy/n8n systems. Expired external tokens fail locally before transport access. Automated coverage uses synthetic secrets and fake transport only; real validation remains manual and pending.

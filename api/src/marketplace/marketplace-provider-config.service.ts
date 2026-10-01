@@ -16,7 +16,7 @@ export class MarketplaceProviderConfigService {
     return new ShopeeAppConfigResolver({ findShopee: async () => prisma.marketplaceProviderConfig.findUnique({ where: { platform: Platform.SHOPEE }, select: { environment: true, partnerId: true, partnerSecretEnvelope: true, redirectUri: true, isEnabled: true } }) }, { decryptPartnerSecret: (envelope: string) => this.secret(envelope) }, env);
   }
   async resolveRuntime(requireRedirect = false) { return this.resolver().resolve({ requireRedirect }); }
-  async list() { const config = await this.getShopee(); return [{ platform: "SHOPEE", implemented: true, config }, { platform: "LAZADA", implemented: false }, { platform: "TIKTOK", implemented: false }]; }
+  async list() { const config = await this.getShopee(); return [{ platform: "SHOPEE", implemented: true, config }, { platform: "LAZADA", implemented: true }, { platform: "TIKTOK", implemented: false }]; }
   async getShopee(): Promise<SafeProviderConfig | null> { const row = await prisma.marketplaceProviderConfig.findUnique({ where: { platform: Platform.SHOPEE }, select: safeSelect }); return row ? this.safe(row) : null; }
   async updateShopee(userId: string, input: UpdateShopeeProviderConfigDto): Promise<SafeProviderConfig> {
     if (input.environment === "production" && !input.redirectUri.startsWith("https://")) throw new BadRequestException({ errorCode: "SHOPEE_REDIRECT_URI_INVALID", message: "Production redirect URI must use HTTPS." });
